@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}Audit history — NU DentalConnect{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Audit history</h1>
+    <p class="page-head__lede">Each row shows who acted, what record changed, the browser-reported device, and the network address seen by the server.</p>
+  </div>
+</header>
+
+<form class="filter-bar" method="get" role="search">
+  <div>
+    <label class="visually-hidden" for="action">Filter by action</label>
+    <select class="form-select" id="action" name="action">
+      <option value="">All actions</option>
+      {% for name in actions %}
+        <option value="{{ name }}" {% if request.args.get('action') == name %}selected{% endif %}>{{ name|replace('_', ' ')|title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="visually-hidden" for="actor">Filter by actor email</label>
+    <input class="form-control" id="actor" name="actor" type="search" value="{{ request.args.get('actor', '') }}" placeholder="Actor email" autocomplete="off">
+  </div>
+  <div>
+    <label class="visually-hidden" for="date_from">From date</label>
+    <input class="form-control" id="date_from" name="date_from" type="date" value="{{ request.args.get('date_from', '') }}">
+  </div>
+  <div>
+    <label class="visually-hidden" for="date_to">To date</label>
+    <input class="form-control" id="date_to" name="date_to" type="date" value="{{ request.args.get('date_to', '') }}">
+  </div>
+  <button class="btn btn-primary" type="submit">{{ icon('search') }} Filter</button>
+</form>
+
+{% if request.args.get('action') or request.args.get('actor') or request.args.get('date_from') or request.args.get('date_to') %}
+<div class="filter-bar__meta">
+  <p class="mb-0"><strong>{{ logs.total }}</strong> {{ 'event' if logs.total == 1 else 'events' }} matching your filters</p>
+  <a href="{{ url_for('admin.audit') }}">Clear filters</a>
+</div>
+{% endif %}
+
+<article class="panel">
+  <div class="panel__head"><div><h2>Events</h2><p>Newest first. A local test may show 127.0.0.1 because the browser connects directly to this computer. “Remember” records whether the sign-in asked to keep a session.</p></div></div>
+  {% if logs.items %}
+  <div class="table-wrap">
+    <table class="data-table data-table--stack">
+      <caption class="visually-hidden">Audit events</caption>
+      <thead><tr><th scope="col">When</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Device</th><th scope="col">Source IP</th><th scope="col">Details</th></tr></thead>
+      <tbody>
+      {% for event in logs.items %}
+        <tr>
+          <td data-label="When"><time datetime="{{ event.created_at|local_datetime('%Y-%m-%dT%H:%M:%S+08:00') }}">{{ event.created_at|local_datetime('%b %d, %Y %I:%M %p') }}</time></td>
+          <td data-label="Actor">{{ event.actor_email }}</td>
+          <td data-label="Action"><span class="status status--info">{{ event.action|replace('_', ' ')|title }}</span></td>
+          <td data-label="Record">{{ event.entity_type|title }}{% if event.entity_id %} #{{ event.entity_id }}{% endif %}</td>
+          <td data-label="Device">{{ event.details.get('device', {}).get('label', '—')|replace('unknown / unknown / unknown', 'Not reported by browser') }}</td>
+          <td data-label="Source IP">{{ event.ip_address or 'Not available' }}</td>
+          <td data-label="Details">{% if event.details %}{% for key, value in event.details.items() if key != 'device' %}<span class="small">{{ key|replace('_', ' ')|title }}: {{ value }}</span>{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}<span class="muted">—</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty-inline"><div class="empty-state"><span class="empty-state__icon">{{ icon('shield', 21) }}</span><h2>No events recorded</h2><p>Audited actions will appear here as account and scheduling changes occur.</p></div></div>
+  {% endif %}
+</article>
+
+{% if logs.pages > 1 %}
+<nav class="pagination" aria-label="Audit log pages">
+  <span class="pagination__pages">Page {{ logs.page }} of {{ logs.pages }}</span>
+  <div class="pagination__actions">
+    {% if logs.has_prev %}<a class="btn btn-outline btn-sm" href="{{ url_for('admin.audit', page=logs.prev_num, action=request.args.get('action'), actor=request.args.get('actor'), date_from=request.args.get('date_from'), date_to=request.args.get('date_to')) }}">{{ icon('arrow-left', 15) }} Previous</a>{% endif %}
+    {% if logs.has_next %}<a class="btn btn-outline btn-sm" href="{{ url_for('admin.audit', page=logs.next_num, action=request.args.get('action'), actor=request.args.get('actor'), date_from=request.args.get('date_from'), date_to=request.args.get('date_to')) }}">Next {{ icon('arrow-right', 15) }}</a>{% endif %}
+  </div>
+</nav>
+{% endif %}
+{% endblock %}

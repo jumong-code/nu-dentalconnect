@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Appointments — NU DentalConnect{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Appointments</h1>
+    <p class="page-head__lede">Review appointment records connected to your listings. You can permanently remove any record; the patient will be notified.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-outline" href="{{ url_for('main.dashboard') }}">{{ icon('arrow-left', 15) }} Dashboard</a>
+  </div>
+</header>
+
+<article class="panel mt-4 appointments-page">
+  {% if appointments.items %}
+    <div class="table-wrap">
+      <table class="data-table data-table--stack">
+        <caption class="visually-hidden">Appointment records for this student</caption>
+        <thead>
+          <tr><th scope="col">Patient</th><th scope="col">Procedure</th><th scope="col">Date and time</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+        </thead>
+        <tbody>
+          {% for a in appointments.items %}
+          <tr>
+            <td data-label="Patient">{{ a.patient.user.full_name }}</td>
+            <td data-label="Procedure">{{ a.listing.title if a.listing else 'Listing removed' }}</td>
+            <td data-label="Date" class="cell-date">{{ a.starts_at|local_datetime('%b %d, %Y · %I:%M %p') }}</td>
+            <td data-label="Status">{{ status_pill(a.status) }}</td>
+            <td data-label="Actions" class="cell-actions">
+              <div class="row-actions d-flex flex-wrap align-items-center gap-2">
+                {% if a.can_cancel() %}
+                <form method="post" action="{{ url_for('student.cancel_appointment', appointment_id=a.id) }}" onsubmit="return confirm('Cancel this appointment and notify the patient?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline" type="submit">Cancel</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('student.delete_appointment', appointment_id=a.id) }}" onsubmit="return confirm('Permanently delete this appointment record? The patient will be notified.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-danger" type="submit">Delete appointment</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-inline">
+      <div class="empty-state">
+        <span class="empty-state__icon">{{ icon('calendar', 21) }}</span>
+        <h2>No appointments recorded</h2>
+        <p>Patient requests for your listings will appear here.</p>
+      </div>
+    </div>
+  {% endif %}
+</article>
+
+{% if appointments.pages > 1 %}
+<nav class="pagination" aria-label="Appointment pages">
+  <span class="pagination__pages">Page {{ appointments.page }} of {{ appointments.pages }}</span>
+  <div class="pagination__actions">
+    {% if appointments.has_prev %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.appointments', page=appointments.prev_num) }}">{{ icon('arrow-left', 15) }} Previous</a>{% endif %}
+    {% if appointments.has_next %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.appointments', page=appointments.next_num) }}">Next {{ icon('arrow-right', 15) }}</a>{% endif %}
+  </div>
+</nav>
+{% endif %}
+{% endblock %}

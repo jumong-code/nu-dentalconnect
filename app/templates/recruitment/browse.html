@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}Browse appointments — NU DentalConnect{% endblock %}
+{% block description %}Browse open dental procedure listings from National University dentistry students and request an appointment time.{% endblock %}
+{% block content %}
+
+<div class="page-band">
+  <div class="container">
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">Appointment directory</p>
+        <h1>Find an appointment</h1>
+        <p class="page-head__lede">Browse procedures dentistry students are seeking patients for. Check the location and preferred schedule, then request a date and time.</p>
+      </div>
+      {% if current_user.is_authenticated and current_user.role == 'patient' %}
+        <div class="page-head__actions">
+          <a class="btn btn-outline" href="{{ url_for('main.dashboard') }}">{{ icon('calendar') }} My appointments</a>
+        </div>
+      {% endif %}
+    </header>
+  </div>
+</div>
+
+<section class="section section--tint">
+  <div class="container">
+    <form class="filter-bar" method="get" role="search">
+      <div>
+        <label class="visually-hidden" for="q">Search procedure listings</label>
+        <input class="form-control" id="q" name="q" type="search" value="{{ request.args.get('q', '') }}" placeholder="Search procedures" autocomplete="off">
+      </div>
+      <div>
+        <label class="visually-hidden" for="category">Procedure type</label>
+        <select class="form-select" name="category" id="category">
+          <option value="">All procedure types</option>
+          {% for category in categories %}
+            <option value="{{ category }}" {% if request.args.get('category') == category %}selected{% endif %}>{{ category }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="visually-hidden" for="availability">Preferred schedule</label>
+        <input class="form-control" id="availability" name="availability" value="{{ request.args.get('availability', '') }}" placeholder="Preferred schedule" autocomplete="off">
+      </div>
+      <button class="btn btn-primary">{{ icon('search') }} Search listings</button>
+    </form>
+
+    <div class="filter-bar__meta">
+      <p class="mb-0">
+        <strong>{{ listings.total }}</strong> open {{ 'procedure' if listings.total == 1 else 'procedures' }}{% if request.args.get('q') or request.args.get('category') or request.args.get('availability') %} matching your filters{% endif %}
+      </p>
+      {% if request.args.get('q') or request.args.get('category') or request.args.get('availability') %}
+        <a class="filter-bar__clear" href="{{ url_for('main.opportunities') }}">Clear filters</a>
+      {% endif %}
+    </div>
+
+    {% if listings.items %}
+      <div class="listing-grid mt-5">
+        {% for listing in listings.items %}{% include 'recruitment/_card.html' %}{% endfor %}
+      </div>
+
+      {% if listings.pages > 1 %}
+      <nav class="pagination" aria-label="Appointment listing pages">
+        <span class="pagination__pages">Page {{ listings.page }} of {{ listings.pages }}</span>
+        <div class="pagination__actions">
+          {% if listings.has_prev %}
+            <a class="btn btn-outline btn-sm" href="{{ url_for('main.opportunities', page=listings.prev_num, q=request.args.get('q'), category=request.args.get('category'), availability=request.args.get('availability')) }}">{{ icon('arrow-left', 15) }} Previous</a>
+          {% else %}
+            <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Previous</span>
+          {% endif %}
+          {% if listings.has_next %}
+            <a class="btn btn-outline btn-sm" href="{{ url_for('main.opportunities', page=listings.next_num, q=request.args.get('q'), category=request.args.get('category'), availability=request.args.get('availability')) }}">Next {{ icon('arrow-right', 15) }}</a>
+          {% else %}
+            <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Next</span>
+          {% endif %}
+        </div>
+      </nav>
+      {% endif %}
+    {% else %}
+      <div class="empty-state mt-5">
+        <span class="empty-state__icon">{{ icon('search', 21) }}</span>
+        <h2>No appointment listings found</h2>
+        <p>Try a different procedure or preferred schedule. New listings appear as dentistry students publish them.</p>
+        <div class="empty-state__actions">
+          <a class="btn btn-primary" href="{{ url_for('main.opportunities') }}">Clear filters</a>
+          <a class="btn btn-outline" href="{{ url_for('main.index') }}#how-it-works">How requests work</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

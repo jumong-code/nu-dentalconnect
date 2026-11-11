@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import password_field %}
+{% from '_macros.html' import icon %}
+{% block title %}Choose password — NU DentalConnect{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <aside class="auth-aside">
+    <img class="auth-aside__image" src="{{ url_for('static', filename='images/nu-campus.png') }}" alt="">
+    <div>
+      <p class="eyebrow eyebrow--inverse">Account access</p>
+      <h2>Choose a password you do not reuse.</h2>
+      <p>Your new password replaces the old one immediately. Sign in again on any device you were using.</p>
+      <ul class="auth-aside__list">
+        <li>{{ icon('check') }}<span>At least 12 characters, including uppercase, lowercase, and a number.</span></li>
+        <li>{{ icon('check') }}<span>Unique to this DentalConnect account.</span></li>
+        <li>{{ icon('lock') }}<span>Stored as a hash, never as plain text.</span></li>
+      </ul>
+    </div>
+    <p class="auth-aside__foot">{{ icon('shield') }} This link is single-use and time limited.</p>
+  </aside>
+
+  <div class="auth-main">
+    <div class="auth-card">
+      <div class="auth-card__head">
+        <h1>Choose a new password</h1>
+        <p>Use at least 12 characters, including uppercase, lowercase, and a number. Avoid passwords you use elsewhere.</p>
+      </div>
+
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.password.label(class='form-label') }}
+          {{ password_field(form.password, 'password', 'new-password') }}
+        </div>
+        <div class="field">
+          {{ form.confirm.label(class='form-label') }}
+          {{ password_field(form.confirm, 'confirm', 'new-password') }}
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Update password</button>
+      </form>
+
+      <p class="auth-switch"><a href="{{ url_for('auth.login') }}">Back to sign in</a></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

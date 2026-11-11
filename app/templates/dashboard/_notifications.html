@@ -1,0 +1,38 @@
+{% from '_macros.html' import icon %}
+<article class="panel mt-4">
+  <div class="panel__head">
+    <div>
+      <h2>Notifications</h2>
+      <p>Updates about your applications, appointment requests, and account.</p>
+    </div>
+    {% if notifications %}
+      {% set unread = notifications|rejectattr('read_at')|list|length %}
+      {% if unread %}<span class="chip chip--navy">{{ unread }} unread</span>{% endif %}
+    {% endif %}
+  </div>
+
+  {% if notifications %}
+    <ul class="activity-list">
+      {% for n in notifications %}
+      <li class="activity-item{% if n.read_at %} is-read{% endif %}">
+        <span class="activity-item__mark" aria-hidden="true"></span>
+        <div class="flex-grow-1">
+          <strong>{{ n.message }}</strong>
+          <div class="activity-item__meta">{{ n.created_at|local_datetime('%b %d, %Y · %I:%M %p') }}{% if n.read_at %} &middot; Read{% else %} &middot; Unread{% endif %}</div>
+        </div>
+        {% if not n.read_at %}
+          <form class="activity-item__action" method="post" action="{{ url_for('main.mark_notification', notification_id=n.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline" type="submit">Mark read</button>
+          </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-inline">
+      <p class="mb-1"><strong>Nothing new.</strong></p>
+      <p class="small muted mb-0">Messages about your account and appointments will appear here.</p>
+    </div>
+  {% endif %}
+</article>

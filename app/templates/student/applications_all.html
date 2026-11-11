@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Patient applications — NU DentalConnect{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Patient applications</h1>
+    <p class="page-head__lede">People who asked to be considered for one of your listings without choosing an appointment time. Appointment requests are in the Appointments area.</p>
+  </div>
+  <div class="page-head__actions d-flex flex-wrap align-items-center gap-2">
+    <a class="btn btn-outline" href="{{ url_for('main.dashboard') }}">{{ icon('arrow-left', 15) }} Dashboard</a>
+    <a class="btn btn-outline" href="{{ url_for('student.appointments') }}">{{ icon('calendar') }} Appointment requests</a>
+  </div>
+</header>
+
+<div class="filter-bar__meta">
+  <p class="mb-0"><strong>{{ applications.total }}</strong> {{ 'application' if applications.total == 1 else 'applications' }} across your listings</p>
+</div>
+
+<section class="stack mt-4 applications-index" aria-label="Applications">
+  {% for application in applications.items %}
+  <article class="applicant">
+    <div class="applicant__head">
+      <div class="applicant__person d-flex align-items-center gap-3">
+        <span class="avatar avatar--paper" aria-hidden="true">{{ application.patient.user.full_name[:1]|upper }}</span>
+        <div>
+          <h2><a href="{{ url_for('main.view_profile', user_id=application.patient.user.id) }}">{{ application.patient.user.full_name }}</a></h2>
+          <p class="applicant__contact">{{ application.patient.user.email }}{% if application.patient.user.phone %} &middot; {{ application.patient.user.phone }}{% endif %}</p>
+        </div>
+      </div>
+      {{ status_pill(application.status) }}
+    </div>
+    <p class="mb-2"><strong>Listing:</strong> <a href="{{ url_for('student.listing_applications', listing_id=application.listing_id) }}">{{ application.listing.title }}</a></p>
+    {% if application.message %}<p class="applicant__message preline">{{ application.message }}</p>{% else %}<p class="small muted">No message included.</p>{% endif %}
+    <div class="split d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <span class="small muted">Applied {{ application.created_at|local_datetime('%b %d, %Y · %I:%M %p') }}</span>
+      {% if application.status == 'pending' %}
+      <div class="applicant__actions d-flex flex-wrap gap-2">
+        <form method="post" action="{{ url_for('student.application_decision', application_id=application.id, decision='accepted') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-primary" type="submit">Accept</button>
+        </form>
+        <form method="post" action="{{ url_for('student.application_decision', application_id=application.id, decision='rejected') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline" type="submit">Reject</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-state__icon">{{ icon('users', 21) }}</span>
+    <h2>No patient applications yet</h2>
+    <p>Patient applications will appear here. Requests for a specific appointment time are listed separately.</p>
+    <div class="empty-state__actions"><a class="btn btn-primary" href="{{ url_for('student.create_listing') }}">Create a listing</a></div>
+  </div>
+  {% endfor %}
+</section>
+
+{% if applications.pages > 1 %}
+<nav class="pagination" aria-label="Application pages">
+  <span class="pagination__pages">Page {{ applications.page }} of {{ applications.pages }}</span>
+  <div class="pagination__actions">
+    {% if applications.has_prev %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.applications', page=applications.prev_num) }}">{{ icon('arrow-left', 15) }} Previous</a>{% endif %}
+    {% if applications.has_next %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.applications', page=applications.next_num) }}">Next {{ icon('arrow-right', 15) }}</a>{% endif %}
+  </div>
+</nav>
+{% endif %}
+{% endblock %}

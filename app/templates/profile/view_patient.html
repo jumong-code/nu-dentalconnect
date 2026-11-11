@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}{{ patient.full_name }} — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="container profile-page profile-page--patient">
+<article class="profile-patient-card">
+  <header class="profile-patient-card__hero">
+    <div class="profile-patient-card__identity">
+      <div class="profile-avatar">
+        {% if patient.patient_profile and patient.patient_profile.avatar_image %}
+          <img src="{{ url_for('main.serve_avatar', filename=patient.patient_profile.avatar_image) }}" alt="" class="avatar avatar--large">
+        {% else %}
+          <div class="avatar avatar--large avatar--placeholder">{{ icon('user', 40) }}</div>
+        {% endif %}
+      </div>
+      <div>
+        <p class="eyebrow">Patient Profile</p>
+        <h1>{{ patient.full_name }}</h1>
+      </div>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('main.dashboard') }}">{{ icon('arrow-left', 15) }} Back</a>
+  </header>
+
+  <div class="profile-patient-card__content{% if fields.application_message %} profile-patient-card__content--message{% endif %}">
+    <section class="profile-patient-card__contact" aria-label="Contact details">
+      <dl class="details-list">
+      <div class="details-item">
+        <dt>{{ icon('mail', 16) }} Email</dt>
+        <dd>{{ fields.email }}</dd>
+      </div>
+      {% if fields.phone %}
+      <div class="details-item">
+        <dt>{{ icon('phone', 16) }} Phone</dt>
+        <dd>{{ fields.phone }}</dd>
+      </div>
+      {% endif %}
+      </dl>
+    </section>
+
+    {% if fields.application_message %}
+    <section class="profile-patient-card__message">
+      <h2>Message from the patient</h2>
+      <p class="preline">{{ fields.application_message }}</p>
+    </section>
+    {% endif %}
+  </div>
+
+  <footer class="profile-patient-card__notice">
+    {{ icon('info', 16) }}
+    <span>This profile is visible because you have an active appointment or application with this patient.</span>
+  </footer>
+</article>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Appointments — NU DentalConnect{% endblock %}
+{% block content %}
+
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Appointments</h1>
+    <p class="page-head__lede">Every patient request, confirmed time, completed visit, and cancellation, newest first.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-outline" href="{{ url_for('admin.users') }}">{{ icon('users') }} Accounts</a>
+  </div>
+</header>
+
+<div class="filter-bar__meta">
+  <p class="mb-0"><strong>{{ appointments.total }}</strong> {{ 'appointment record' if appointments.total == 1 else 'appointment records' }}</p>
+</div>
+
+<article class="panel mt-3">
+  {% if appointments.items %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <caption class="visually-hidden">All appointments</caption>
+        <thead>
+          <tr>
+            <th scope="col">Date and time</th>
+            <th scope="col">Patient</th>
+            <th scope="col">Student</th>
+            <th scope="col">Procedure listing</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in appointments.items %}
+          <tr>
+            <td class="cell-date">
+              {{ a.starts_at|local_datetime('%b %d, %Y · %I:%M %p') }}
+              {% if a.proposed_at %}<span class="cell-meta">Proposed: {{ a.proposed_at|local_datetime('%b %d · %I:%M %p') }}</span>{% endif %}
+            </td>
+            <td>{{ a.patient.user.full_name }}</td>
+            <td>{{ a.student.user.full_name }}</td>
+            <td>
+              {% if a.listing %}
+                <span class="cell-title"><a href="{{ url_for('main.opportunity_detail', listing_id=a.listing.id) }}">{{ a.listing.title }}</a></span>
+              {% else %}
+                <span class="muted">Listing removed</span>
+              {% endif %}
+            </td>
+            <td>{{ status_pill(a.status) }}</td>
+            <td class="cell-actions">
+              <form method="post" action="{{ url_for('admin.delete_appointment', appointment_id=a.id) }}" onsubmit="return confirm('Permanently delete this appointment record?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-inline">
+      <div class="empty-state">
+        <span class="empty-state__icon">{{ icon('calendar', 21) }}</span>
+        <h2>No appointments recorded</h2>
+        <p>Appointment requests appear here as soon as a patient sends one from a published listing.</p>
+      </div>
+    </div>
+  {% endif %}
+</article>
+
+{% if appointments.pages > 1 %}
+<nav class="pagination" aria-label="Appointment pages">
+  <span class="pagination__pages">Page {{ appointments.page }} of {{ appointments.pages }}</span>
+  <div class="pagination__actions">
+    {% if appointments.has_prev %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.appointments', page=appointments.prev_num) }}">{{ icon('arrow-left', 15) }} Previous</a>
+    {% else %}
+      <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Previous</span>
+    {% endif %}
+    {% if appointments.has_next %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.appointments', page=appointments.next_num) }}">Next {{ icon('arrow-right', 15) }}</a>
+    {% else %}
+      <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Next</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+{% endblock %}

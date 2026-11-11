@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, password_field %}
+{% block title %}Create account — NU DentalConnect{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <aside class="auth-aside">
+    <img class="auth-aside__image" src="{{ url_for('static', filename='images/nu-campus.png') }}" alt="">
+    <div>
+      <p class="eyebrow eyebrow--inverse">Get started</p>
+      <h2>One account. The whole request.</h2>
+      <p>Patients request appointment times. Dentistry students publish procedures and answer requests. Both keep everything in one workspace.</p>
+      <ul class="auth-aside__list">
+        <li>{{ icon('search') }}<span>Patients: browse procedures and request one time.</span></li>
+        <li>{{ icon('file') }}<span>Students: publish listings and reuse saved templates.</span></li>
+        <li>{{ icon('shield') }}<span>No student ID numbers and no health records.</span></li>
+      </ul>
+    </div>
+    <p class="auth-aside__foot">{{ icon('info') }} {{ authorization_notice }}</p>
+  </aside>
+
+  <div class="auth-main">
+    <div class="auth-card">
+      <div class="auth-card__head">
+        <h1>Create your account</h1>
+        <p>A few details and you can send your first request.</p>
+      </div>
+
+      <form method="post">
+        {{ form.hidden_tag() }}
+
+        <div class="field">
+          {{ form.full_name.label(class='form-label') }}
+          {{ form.full_name(class='form-control' + (' is-invalid' if form.full_name.errors else ''), autocomplete='name', **{'aria-invalid': 'true' if form.full_name.errors else 'false'}) }}
+          {% for error in form.full_name.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="field">
+          {{ form.email.label(class='form-label') }}
+          {{ form.email(class='form-control' + (' is-invalid' if form.email.errors else ''), autocomplete='email', **{'aria-invalid': 'true' if form.email.errors else 'false'}) }}
+          {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-grid form-grid--two">
+          <div class="field">
+            {{ form.role.label(class='form-label') }}
+            {{ form.role(class='form-select' + (' is-invalid' if form.role.errors else ''), **{'aria-invalid': 'true' if form.role.errors else 'false'}) }}
+            <span class="form-help">Seeking care, or a dentistry student?</span>
+            {% for error in form.role.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="field">
+            {{ form.phone.label(class='form-label') }} <span aria-hidden="true">*</span>
+            {{ form.phone(class='form-control' + (' is-invalid' if form.phone.errors else ''), autocomplete='tel', required=true, **{'aria-invalid': 'true' if form.phone.errors else 'false'}) }}
+            <span class="form-help">Required. Used for appointment contact.</span>
+            {% for error in form.phone.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+
+        <div class="field">
+          {{ form.password.label(class='form-label') }}
+          {{ password_field(form.password, 'password', 'new-password') }}
+          <span class="form-help">At least 12 characters, including uppercase, lowercase, and a number.</span>
+        </div>
+
+        <div class="field">
+          {{ form.confirm.label(class='form-label') }}
+          {{ password_field(form.confirm, 'confirm', 'new-password') }}
+        </div>
+
+        {% set student_role = form.role.data == 'student' %}
+        <div class="form-grid form-grid--two" data-student-details{% if not student_role %} hidden{% endif %}>
+          <div class="field">
+            {{ form.year_level.label(class='form-label') }}
+            {{ form.year_level(class='form-select' + (' is-invalid' if form.year_level.errors else ''), **{'aria-invalid': 'true' if form.year_level.errors else 'false'}) }}
+            <span class="form-help">Only for dentistry student accounts.</span>
+            {% for error in form.year_level.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="field">
+            {{ form.campus.label(class='form-label') }}
+            {{ form.campus(class='form-control' + (' is-invalid' if form.campus.errors else ''), **{'aria-invalid': 'true' if form.campus.errors else 'false'}) }}
+            <span class="form-help">Only for dentistry student accounts. Acronyms such as NU stay uppercase.</span>
+            {% for error in form.campus.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="form-help">Do not include sensitive health information in your profile. This platform stores account and scheduling details only.</span>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Create account</button>
+      </form>
+
+      <p class="auth-switch">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

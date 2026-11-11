@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}Account pending approval — NU DentalConnect{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="auth-main auth-main--center">
+    <div class="auth-card">
+      <div class="auth-card__head">
+        <div class="auth-icon auth-icon--pending">{{ icon('clock', 48) }}</div>
+        <h1>Account pending approval</h1>
+        <p>Thank you for registering as a dentistry student. Your account is awaiting administrator review.</p>
+      </div>
+
+      <div class="auth-status">
+        <div class="status-badge status-badge--pending">
+          {{ icon('clock', 16) }} Under review
+        </div>
+        <p class="status-detail">An administrator will review your registration and approve your account. This typically takes 1-2 business days.</p>
+        <p class="status-detail">You will receive an email notification once your account is approved.</p>
+      </div>
+
+      {% if user %}
+      <div class="auth-info">
+        <h3>Registration details</h3>
+        <dl class="details-list">
+          <div class="details-item">
+            <dt>Name</dt>
+            <dd>{{ user.full_name }}</dd>
+          </div>
+          <div class="details-item">
+            <dt>Email</dt>
+            <dd>{{ user.email }}</dd>
+          </div>
+          {% if user.phone %}
+          <div class="details-item">
+            <dt>Phone</dt>
+            <dd>{{ user.phone }}</dd>
+          </div>
+          {% endif %}
+          {% if user.student_profile %}
+          {% if user.student_profile.year_level %}
+          <div class="details-item">
+            <dt>Year Level</dt>
+            <dd>{{ user.student_profile.year_level }}</dd>
+          </div>
+          {% endif %}
+          {% if user.student_profile.campus %}
+          <div class="details-item">
+            <dt>Campus</dt>
+            <dd>{{ user.student_profile.campus }}</dd>
+          </div>
+          {% endif %}
+          {% endif %}
+          <div class="details-item">
+            <dt>Submitted</dt>
+            <dd>{{ user.created_at|local_datetime('%b %d, %Y at %I:%M %p') }}</dd>
+          </div>
+        </dl>
+      </div>
+      {% endif %}
+
+      <div class="auth-actions">
+        <a class="btn btn-primary btn-block" href="{{ url_for('auth.login') }}">{{ icon('arrow-left', 16) }} Return to sign in</a>
+      </div>
+
+      <p class="auth-note">
+        {{ icon('info', 16) }} If you believe this is an error or need urgent access, please contact the administration office.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

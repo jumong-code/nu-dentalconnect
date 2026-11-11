@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Appointment listings — NU DentalConnect{% endblock %}
+{% block content %}
+
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Appointment listings</h1>
+    <p class="page-head__lede">Review every procedure posted by dentistry students, including drafts and closed listings.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-outline" href="{{ url_for('main.opportunities') }}">{{ icon('search') }} Patient view</a>
+  </div>
+</header>
+
+<div class="filter-bar__meta">
+  <p class="mb-0"><strong>{{ listings.total }}</strong> {{ 'listing' if listings.total == 1 else 'listings' }} in total</p>
+</div>
+
+<article class="panel mt-3">
+  {% if listings.items %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <caption class="visually-hidden">All appointment listings</caption>
+        <thead>
+          <tr>
+            <th scope="col">Procedure listing</th>
+            <th scope="col">Student</th>
+            <th scope="col">Procedure type</th>
+            <th scope="col">Posted</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in listings.items %}
+          <tr>
+            <td>
+              <span class="cell-title"><a href="{{ url_for('main.opportunity_detail', listing_id=l.id) }}">{{ l.title }}</a></span>
+              <span class="cell-meta">{{ l.location }}</span>
+            </td>
+            <td>{{ l.student.user.full_name }}</td>
+            <td><span class="chip chip--quiet">{{ l.category }}</span></td>
+            <td class="cell-date">{{ l.created_at|local_datetime('%b %d, %Y') }}</td>
+            <td>{{ status_pill(l.status) }}</td>
+            <td class="cell-actions">
+              {% if l.status != 'closed' %}
+                <form method="post" action="{{ url_for('admin.close_listing', listing_id=l.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline" type="submit">Close listing</button>
+                </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('admin.delete_listing', listing_id=l.id) }}" onsubmit="return confirm('Permanently delete this listing?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if l.status != 'closed' %}<label class="small"><input type="checkbox" name="confirm" value="true"> Cancel future confirmed appointments</label>{% endif %}
+                <button class="btn btn-sm btn-danger" type="submit">Delete listing</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-inline">
+      <div class="empty-state">
+        <span class="empty-state__icon">{{ icon('file', 21) }}</span>
+        <h2>No listings yet</h2>
+        <p>Listings appear here once a dentistry student saves one. Drafts are included so you can review before publication.</p>
+      </div>
+    </div>
+  {% endif %}
+</article>
+
+{% if listings.pages > 1 %}
+<nav class="pagination" aria-label="Listing pages">
+  <span class="pagination__pages">Page {{ listings.page }} of {{ listings.pages }}</span>
+  <div class="pagination__actions">
+    {% if listings.has_prev %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.listings', page=listings.prev_num) }}">{{ icon('arrow-left', 15) }} Previous</a>
+    {% else %}
+      <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Previous</span>
+    {% endif %}
+    {% if listings.has_next %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.listings', page=listings.next_num) }}">Next {{ icon('arrow-right', 15) }}</a>
+    {% else %}
+      <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Next</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+{% endblock %}

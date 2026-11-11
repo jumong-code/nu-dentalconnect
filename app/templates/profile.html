@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}Your profile — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="profile-settings">
+<header class="page-head profile-settings__head">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1>Your profile</h1>
+    <p class="page-head__lede">Keep your account and contact information current so students can reach you about appointments.</p>
+  </div>
+</header>
+
+<section class="profile-overview" aria-label="Account summary">
+  <div class="profile-overview__person">
+    {% if current_user.role == 'patient' and current_user.patient_profile.avatar_image %}
+      <img class="avatar avatar--image" src="{{ url_for('main.serve_avatar', filename=current_user.patient_profile.avatar_image) }}" alt="Your avatar">
+    {% elif current_user.role == 'student' and current_user.student_profile.avatar_image %}
+      <img class="avatar avatar--image" src="{{ url_for('main.serve_avatar', filename=current_user.student_profile.avatar_image) }}" alt="Your avatar">
+    {% else %}
+      <span class="avatar" aria-hidden="true">{{ current_user.full_name[:1]|upper }}</span>
+    {% endif %}
+    <h2>{{ current_user.full_name }}</h2>
+    <p class="identity-card__meta">{{ current_user.email }}</p>
+    {% if current_user.is_active %}
+      <span class="status status--success">Active account</span>
+    {% else %}
+      <span class="status status--neutral">Inactive account</span>
+    {% endif %}
+  </div>
+  <dl class="identity-list profile-overview__facts">
+      <div><dt>Role</dt><dd>{{ current_user.role|title }}</dd></div>
+      <div><dt>Member since</dt><dd>{{ current_user.created_at|local_datetime('%b %Y') }}</dd></div>
+      {% if current_user.role == 'student' and current_user.student_profile.year_level %}
+        <div><dt>Year level</dt><dd>{{ current_user.student_profile.year_level }}</dd></div>
+      {% endif %}
+      {% if current_user.role == 'student' and current_user.student_profile.campus %}
+        <div><dt>Campus</dt><dd>{{ current_user.student_profile.campus }}</dd></div>
+      {% endif %}
+      {% if current_user.role == 'student' and current_user.student_profile.facebook_url %}
+        <div><dt>Facebook</dt><dd><a href="{{ current_user.student_profile.facebook_url }}" target="_blank" rel="noopener noreferrer">Open profile</a></dd></div>
+      {% endif %}
+      {% if current_user.phone %}
+        <div><dt>Phone</dt><dd>{{ current_user.phone }}</dd></div>
+      {% endif %}
+  </dl>
+  {% if current_user.role in ['patient', 'student'] %}
+    <div class="avatar-actions profile-overview__actions d-flex flex-wrap align-items-center gap-2">
+      <form method="post" action="{{ url_for('main.upload_avatar') }}" enctype="multipart/form-data" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="file" name="avatar" id="avatar-input" accept="image/jpeg,image/png,image/webp" style="display:none" aria-label="Choose avatar image" onchange="this.form.submit()">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('avatar-input').click()">{{ icon('user') }} Upload avatar</button>
+        <span class="form-help d-block mt-1">Max 2 MB, 512×512 px. JPEG, PNG, WebP.</span>
+      </form>
+      {% if (current_user.role == 'patient' and current_user.patient_profile.avatar_image) or (current_user.role == 'student' and current_user.student_profile.avatar_image) %}
+      <form method="post" action="{{ url_for('main.remove_avatar') }}" class="d-inline" onsubmit="return confirm('Remove your avatar?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline btn-sm btn-danger">{{ icon('trash') }} Remove</button>
+      </form>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<div class="profile-settings__workspace">
+  <section class="profile-settings__account" aria-label="Account information">
+    <article class="panel profile-settings__panel">
+      <div class="panel__head profile-settings__panel-head">
+        <span class="profile-settings__section-icon" aria-hidden="true">{{ icon('user', 18) }}</span>
+        <div>
+          <h2>Account information</h2>
+          <p>Your name and contact details. Student ID numbers are not collected.</p>
+        </div>
+      </div>
+      <div class="panel__body">
+        <form class="profile-settings__form" method="post" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="form-grid form-grid--two">
+            <div class="field">
+              {{ form.full_name.label(class='form-label') }}
+              {{ form.full_name(class='form-control' + (' is-invalid' if form.full_name.errors else ''), autocomplete='name', **{'aria-invalid': 'true' if form.full_name.errors else 'false'}) }}
+              {% for error in form.full_name.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="field">
+              {{ form.email.label(class='form-label') }}
+              {{ form.email(class='form-control' + (' is-invalid' if form.email.errors else ''), autocomplete='email', **{'aria-invalid': 'true' if form.email.errors else 'false'}) }}
+              <span class="form-help">Changing your email requires a new verification code before your next sign-in.</span>
+              {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+          </div>
+          <div class="field">
+            {{ form.phone.label(class='form-label') }}
+            {{ form.phone(class='form-control' + (' is-invalid' if form.phone.errors else ''), autocomplete='tel', **{'aria-invalid': 'true' if form.phone.errors else 'false'}) }}
+            {% for error in form.phone.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+
+          {% if current_user.role == 'student' %}
+            <div class="form-grid form-grid--two">
+              <div class="field">
+                {{ form.year_level.label(class='form-label') }}
+                {{ form.year_level(class='form-control' + (' is-invalid' if form.year_level.errors else ''), placeholder='e.g. Year 3', **{'aria-invalid': 'true' if form.year_level.errors else 'false'}) }}
+                <span class="form-help">Enter Year 1 through Year 5 or Intern.</span>
+                {% for error in form.year_level.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+              </div>
+              <div class="field">
+                {{ form.campus.label(class='form-label') }}
+                {{ form.campus(class='form-control' + (' is-invalid' if form.campus.errors else ''), **{'aria-invalid': 'true' if form.campus.errors else 'false'}) }}
+                {% for error in form.campus.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+              </div>
+            </div>
+            <div class="field">
+              {{ form.facebook_url.label(class='form-label') }}
+              {{ form.facebook_url(class='form-control' + (' is-invalid' if form.facebook_url.errors else ''), type='url', placeholder='https://www.facebook.com/your-page', **{'aria-invalid': 'true' if form.facebook_url.errors else 'false'}) }}
+              {% for error in form.facebook_url.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="field">
+              {{ form.bio.label(class='form-label') }}
+              {{ form.bio(class='form-control' + (' is-invalid' if form.bio.errors else ''), rows=3, **{'aria-invalid': 'true' if form.bio.errors else 'false'}) }}
+              <span class="form-help">Shown on your published listings. Keep it general.</span>
+              {% for error in form.bio.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Save profile</button>
+          </div>
+        </form>
+      </div>
+    </article>
+  </section>
+
+  <aside class="profile-settings__security">
+    <article class="panel profile-settings__panel profile-settings__panel--security">
+      <div class="panel__head profile-settings__panel-head">
+        <span class="profile-settings__section-icon" aria-hidden="true">{{ icon('lock', 18) }}</span>
+        <div>
+          <h2>Password and security</h2>
+          <p>Use your current password and choose at least 12 characters with uppercase, lowercase, and a number.</p>
+        </div>
+      </div>
+      <div class="panel__body">
+        <form method="post" action="{{ url_for('main.change_password') }}">
+          {{ password_form.hidden_tag() }}
+          <div class="field">
+            {{ password_form.current_password.label(class='form-label') }}
+            {{ password_form.current_password(class='form-control' + (' is-invalid' if password_form.current_password.errors else ''), autocomplete='current-password', **{'aria-invalid': 'true' if password_form.current_password.errors else 'false'}) }}
+            {% for error in password_form.current_password.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="form-grid form-grid--two">
+            <div class="field">
+              {{ password_form.password.label(class='form-label') }}
+              {{ password_form.password(class='form-control' + (' is-invalid' if password_form.password.errors else ''), autocomplete='new-password', **{'aria-invalid': 'true' if password_form.password.errors else 'false'}) }}
+              {% for error in password_form.password.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="field">
+              {{ password_form.confirm.label(class='form-label') }}
+              {{ password_form.confirm(class='form-control' + (' is-invalid' if password_form.confirm.errors else ''), autocomplete='new-password', **{'aria-invalid': 'true' if password_form.confirm.errors else 'false'}) }}
+              {% for error in password_form.confirm.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-outline" type="submit">{{ icon('lock') }} Change password</button>
+          </div>
+        </form>
+      </div>
+    </article>
+
+    <div class="notice profile-settings__notice">
+      {{ icon('shield') }}
+      <p><span class="notice__title">Scheduling data only.</span>Do not store diagnoses, treatment notes, or medical records in your profile or listings.</p>
+    </div>
+  </aside>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}{{ title }} — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="page-band">
+  <div class="container">
+    <a class="back-link" href="{{ url_for('main.dashboard') }}">{{ icon('arrow-left', 15) }} Back to dashboard</a>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">Appointment listing</p>
+        <h1>{{ title }}</h1>
+        <p class="page-head__lede">Describe the procedure and the appointment details patients need before requesting a time.</p>
+      </div>
+      {% if listing %}
+        <div class="page-head__actions">
+          <span class="small muted">Status: {{ listing.status|title }}</span>
+        </div>
+      {% endif %}
+    </header>
+  </div>
+</div>
+
+<section class="section section--tint">
+  <div class="container editor-layout">
+    <div>
+      <form method="post" class="editor-form" id="listing-editor" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <section class="template-picker" aria-labelledby="template-heading">
+          <div class="template-picker__head">
+            <div>
+              <h2 id="template-heading">Start from a template</h2>
+              <p>Choose a starter, then review and edit every field before saving or publishing.</p>
+            </div>
+            <a class="link-arrow" href="{{ url_for('student.listing_templates') }}">Manage saved templates {{ icon('arrow-right', 15) }}</a>
+          </div>
+          <div class="template-picker__controls">
+            <label class="visually-hidden" for="template-choice">Choose a listing template</label>
+            <select id="template-choice" class="form-select">
+              <option value="">Choose a template to fill the fields…</option>
+              <optgroup label="Built-in starters">
+                {% for template in template_data.builtIn %}<option value="{{ template.id }}">{{ template.name }}</option>{% endfor %}
+              </optgroup>
+              {% if templates %}
+                <optgroup label="My saved templates">
+                  {% for template in templates %}<option value="saved-{{ template.id }}">{{ template.name }}</option>{% endfor %}
+                </optgroup>
+              {% endif %}
+            </select>
+          </div>
+          <p class="form-help" id="template-feedback" role="status" aria-live="polite">Selecting a template fills the form. Edit the details before saving or publishing.</p>
+        </section>
+
+        <section class="form-section" aria-labelledby="section-procedure">
+          <div class="form-section__head">
+            <span class="form-section__num" aria-hidden="true">01</span>
+            <div>
+              <h2 id="section-procedure">Procedure details</h2>
+              <p>Give the listing a clear name and type.</p>
+            </div>
+          </div>
+          <div class="form-grid form-grid--two">
+            <div class="field">
+              {{ form.title.label(class='form-label') }}
+              {{ form.title(class='form-control' + (' is-invalid' if form.title.errors else ''), autocomplete='off', **{'aria-invalid': 'true' if form.title.errors else 'false'}) }}
+              <span class="form-help">Use a short title, up to 50 characters.</span>
+              {% for error in form.title.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="field">
+              {{ form.category.label(class='form-label') }}
+              {{ form.category(class='form-control' + (' is-invalid' if form.category.errors else ''), autocomplete='off', **{'aria-invalid': 'true' if form.category.errors else 'false'}) }}
+              {% for error in form.category.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section" aria-labelledby="section-when">
+          <div class="form-section__head">
+            <span class="form-section__num" aria-hidden="true">02</span>
+            <div>
+              <h2 id="section-when">Where and when</h2>
+              <p>Use the clinic location and appointment windows you can confirm.</p>
+            </div>
+          </div>
+          <div class="form-grid form-grid--two">
+            <div class="field">
+              {{ form.location.label(class='form-label') }}
+              {{ form.location(class='form-control' + (' is-invalid' if form.location.errors else ''), autocomplete='street-address', **{'aria-invalid': 'true' if form.location.errors else 'false'}) }}
+              {% for error in form.location.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+            <div class="field">
+              {{ form.preferred_schedule.label(class='form-label') }}
+              {{ form.preferred_schedule(class='form-control' + (' is-invalid' if form.preferred_schedule.errors else ''), autocomplete='off', **{'aria-invalid': 'true' if form.preferred_schedule.errors else 'false'}) }}
+              {% for error in form.preferred_schedule.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section" aria-labelledby="section-patient">
+          <div class="form-section__head">
+            <span class="form-section__num" aria-hidden="true">03</span>
+            <div>
+              <h2 id="section-patient">Patient information</h2>
+              <p>Explain the procedure and who can request an appointment.</p>
+            </div>
+          </div>
+          <div class="field">
+            {{ form.description.label(class='form-label') }}
+            {{ form.description(class='form-control' + (' is-invalid' if form.description.errors else ''), rows=5, **{'aria-invalid': 'true' if form.description.errors else 'false'}) }}
+            <span class="form-help">Avoid adding patient records or sensitive health information.</span>
+            {% for error in form.description.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="field">
+            {{ form.eligibility.label(class='form-label') }}
+            {{ form.eligibility(class='form-control' + (' is-invalid' if form.eligibility.errors else ''), rows=4, **{'aria-invalid': 'true' if form.eligibility.errors else 'false'}) }}
+            {% for error in form.eligibility.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </section>
+
+        <section class="form-section" aria-labelledby="section-cover">
+          <div class="form-section__head">
+            <span class="form-section__num" aria-hidden="true">04</span>
+            <div>
+              <h2 id="section-cover">Cover image (optional)</h2>
+              <p>Upload a photo to make your listing stand out. Max 4 MB, 1600 px on the long edge. JPEG, PNG, WebP.</p>
+            </div>
+          </div>
+          {% if listing and listing.cover_image %}
+            <div class="cover-preview mb-3">
+              <img src="{{ url_for('main.serve_cover', filename=listing.cover_image) }}" alt="Current cover image" style="max-width:100%;height:auto;border-radius:8px;border:1px solid #d9e1ed">
+              <div class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="button" class="btn btn-outline btn-sm btn-danger" onclick="removeCover({{ listing.id }}, this)">{{ icon('trash') }} Remove cover</button>
+              </div>
+            </div>
+          {% endif %}
+          <div class="field">
+            <label class="form-label" for="cover-input">Choose cover image</label>
+            <input type="file" name="cover" id="cover-input" accept="image/jpeg,image/png,image/webp" class="form-control" aria-describedby="cover-help">
+            <span class="form-help" id="cover-help">Max 4 MB, 1600 px. JPEG, PNG, WebP. Recommended aspect ratio 16:9.</span>
+          </div>
+        </section>
+
+        <section class="save-template-row" aria-labelledby="save-template-label">
+          <div>
+            <label class="form-label" id="save-template-label" for="template_name">Save these fields as a reusable template</label>
+            <p class="form-help">Your saved templates are private to your student account. Saving a template does not save the listing.</p>
+          </div>
+          <div class="save-template-controls">
+            {{ form.template_name(class='form-control' + (' is-invalid' if form.template_name.errors else ''), placeholder='e.g. Weekly examination clinic', maxlength='80') }}
+            <button class="btn btn-outline" name="save_listing_template" value="1" type="submit">Save template</button>
+          </div>
+          {% for error in form.template_name.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </section>
+
+        <div class="form-actions">
+          <a class="btn btn-outline" href="{{ url_for('main.dashboard') }}">Cancel</a>
+          <a class="form-actions__clear" href="#" onclick="clearListingForm(); return false;">{{ icon('trash', 14) }} Clear all fields</a>
+          <label class="publish-toggle">
+            {{ form.publish_now(class='publish-toggle__input') }}
+            <span>Publish immediately</span>
+          </label>
+          <button class="btn btn-primary" type="submit">Save listing</button>
+        </div>
+      </form>
+    </div>
+
+    <aside class="editor-aside">
+      <section class="aside-card">
+        <h2>Before you publish</h2>
+        <p>Check the details patients will rely on.</p>
+        <ul class="checklist">
+          <li>{{ icon('check') }}<span>The procedure description is accurate.</span></li>
+          <li>{{ icon('check') }}<span>Location and available times are current.</span></li>
+          <li>{{ icon('check') }}<span>Eligibility and instructions are confirmed with your clinic.</span></li>
+        </ul>
+      </section>
+      <section class="aside-card">
+        <h2>How publishing works</h2>
+        <p>Save as a private draft or publish immediately. You can review and change the status from your dashboard.</p>
+        <div class="aside-note">Templates only prefill text. You can edit every field before saving a listing.</div>
+      </section>
+    </aside>
+  </div>
+</section>
+
+<script id="listing-template-data" type="application/json">{{ template_data|tojson }}</script>
+
+<script>
+  // Initialize template picker to auto-fill form fields
+  document.addEventListener('DOMContentLoaded', function() {
+    const templateSelect = document.getElementById('template-choice');
+    const templateData = JSON.parse(document.getElementById('listing-template-data').textContent);
+
+    // Combine built-in and saved templates into a single lookup
+    const allTemplates = {};
+    if (templateData.builtIn) {
+      templateData.builtIn.forEach(t => { allTemplates[t.id] = t; });
+    }
+    if (templateData.saved) {
+      templateData.saved.forEach(t => { allTemplates[t.id] = t; });
+    }
+
+    if (templateSelect && Object.keys(allTemplates).length > 0) {
+      templateSelect.addEventListener('change', function() {
+        const templateId = this.value;
+        const feedback = document.getElementById('template-feedback');
+
+        if (!templateId || !allTemplates[templateId]) {
+          if (feedback) feedback.textContent = 'Selecting a template fills the form. Edit the details before saving or publishing.';
+          return;
+        }
+
+        const template = allTemplates[templateId];
+
+        // Fill form fields (skip location and preferred_schedule)
+        const titleField = document.querySelector('input[name="title"]');
+        const categoryField = document.querySelector('input[name="category"]');
+        const descField = document.querySelector('textarea[name="description"]');
+        const eligField = document.querySelector('textarea[name="eligibility"]');
+
+        if (titleField) titleField.value = template.title || '';
+        if (categoryField) categoryField.value = template.category || '';
+        if (descField) descField.value = template.description || '';
+        if (eligField) eligField.value = template.eligibility || '';
+
+        // Trigger input events for any validation listeners
+        [titleField, categoryField, descField, eligField].forEach(f => {
+          if (f) f.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        if (feedback) {
+          const sourceLabel = templateId.startsWith('saved-') ? 'saved template' : 'built-in starter';
+          feedback.textContent = `Loaded "${template.name}" from ${sourceLabel}. Review and edit all fields before saving or publishing.`;
+        }
+      });
+    }
+  });
+
+  // Clear all form fields - globally accessible for onclick handler
+  function clearListingForm() {
+    if (!confirm('Clear all fields? This cannot be undone.')) return;
+
+    const fields = [
+      'input[name="title"]',
+      'input[name="category"]',
+      'input[name="location"]',
+      'input[name="preferred_schedule"]',
+      'textarea[name="description"]',
+      'textarea[name="eligibility"]'
+    ];
+
+    fields.forEach(selector => {
+      const field = document.querySelector(selector);
+      if (field) {
+        field.value = '';
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+
+    // Reset template selector
+    const templateSelect = document.getElementById('template-choice');
+    if (templateSelect) {
+      templateSelect.value = '';
+    }
+
+    const feedback = document.getElementById('template-feedback');
+    if (feedback) {
+      feedback.textContent = 'Selecting a template fills the form. Edit the details before saving or publishing.';
+    }
+  }
+
+  function removeCover(listingId, button) {
+    if (!confirm('Remove this cover image?')) return;
+
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    button.disabled = true;
+    button.textContent = 'Removing...';
+
+    fetch(`/student/listings/${listingId}/cover/remove`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        'csrf_token': csrfToken
+      })
+    })
+    .then(response => {
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        throw new Error('Failed to remove cover');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Failed to remove cover image. Please try again.');
+      button.disabled = false;
+      button.innerHTML = '{{ icon("trash") }} Remove cover';
+    });
+  }
+</script>
+{% endblock %}

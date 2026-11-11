@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Student dashboard — NU DentalConnect{% endblock %}
+{% block content %}
+
+{% set confirmed = appointment_counts.get('confirmed', 0) %}
+{% set open_request_count = appointment_counts.get('pending', 0) + appointment_counts.get('reschedule_requested', 0) %}
+{% set requests = appointments|selectattr('status', 'in', ['pending', 'reschedule_requested'])|list %}
+
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Student workspace</p>
+    <h1>Welcome, {{ current_user.full_name.split()[0] }}.</h1>
+    <p class="page-head__lede">Publish the procedures you need patients for, then answer every request from one queue.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-primary" href="{{ url_for('student.create_listing') }}">{{ icon('plus') }} Post a listing</a>
+    <a class="btn btn-outline" href="{{ url_for('student.listing_templates') }}">{{ icon('file') }} Saved templates</a>
+  </div>
+</header>
+
+<div class="stat-grid">
+  <article class="stat">
+    <p class="stat__label">Published listings</p>
+    <p class="stat__value">{{ published_listing_count }}</p>
+    <p class="stat__note">Visible in the appointment directory</p>
+  </article>
+  <article class="stat">
+    <p class="stat__label">Patient applications</p>
+    <p class="stat__value">{{ applicants }}</p>
+    <p class="stat__note">Separate from appointment requests</p>
+    <a class="link-arrow" href="{{ url_for('student.applications') }}">Review all applications {{ icon('arrow-right', 15) }}</a>
+  </article>
+  <article class="stat{% if pending_applications %} stat--attention{% endif %}">
+    <p class="stat__label">Awaiting your decision</p>
+    <p class="stat__value">{{ pending_applications }}</p>
+    <p class="stat__note">{{ 'Applications need a response' if pending_applications else 'No applications waiting' }}</p>
+  </article>
+  <article class="stat{% if requests %} stat--attention{% endif %}">
+    <p class="stat__label">Requests to answer</p>
+    <p class="stat__value">{{ open_request_count }}</p>
+    <p class="stat__note">{{ confirmed }} confirmed appointment{{ '' if confirmed == 1 else 's' }}</p>
+  </article>
+</div>
+
+<div class="dashboard-grid">
+  <article class="panel">
+    <div class="panel__head">
+      <div>
+        <h2>Your appointment listings</h2>
+        <p>Drafts stay private. Published listings accept patient requests.</p>
+      </div>
+      <a class="link-arrow" href="{{ url_for('student.create_listing') }}">{{ icon('plus', 15) }} New listing</a>
+    </div>
+
+    {% if listings %}
+      <div class="table-wrap">
+        <table class="data-table data-table--stack">
+          <caption class="visually-hidden">Your appointment listings</caption>
+          <thead>
+            <tr>
+              <th scope="col">Listing</th>
+              <th scope="col">Status</th>
+              <th scope="col">Applications</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in listings %}
+            <tr>
+              <td data-label="Listing">
+                <span class="cell-title">{{ l.title }}</span>
+                <span class="cell-meta">{{ l.category }} &middot; posted {{ l.created_at|local_datetime('%b %d') }}</span>
+              </td>
+              <td data-label="Status">{{ status_pill(l.status) }}</td>
+              <td data-label="Applications">
+                <a class="tabular" href="{{ url_for('student.listing_applications', listing_id=l.id) }}">{{ application_counts.get(l.id, 0) }} {{ 'application' if application_counts.get(l.id, 0) == 1 else 'applications' }}</a>
+              </td>
+              <td data-label="Actions">
+                <div class="row-actions d-flex flex-wrap align-items-center gap-2">
+                  <a class="btn btn-sm btn-outline" href="{{ url_for('student.edit_listing', listing_id=l.id) }}">Edit</a>
+                  <a class="btn btn-sm btn-outline" href="{{ url_for('student.listing_applications', listing_id=l.id) }}">Review</a>
+                  {% if l.status == 'draft' %}
+                    <form method="post" action="{{ url_for('student.listing_status', listing_id=l.id, status='published') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-primary" type="submit">Publish</button>
+                    </form>
+                  {% elif l.status == 'published' %}
+                    <form method="post" action="{{ url_for('student.listing_status', listing_id=l.id, status='closed') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-outline" type="submit">Close</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{{ url_for('student.listing_status', listing_id=l.id, status='draft') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-outline" type="submit">Reopen as draft</button>
+                    </form>
+                  {% endif %}
+              <form class="listing-delete" method="post" action="{{ url_for('student.delete_listing', listing_id=l.id) }}" onsubmit="return confirm('Permanently delete this listing?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if l.status != 'closed' %}<label class="form-check listing-delete__confirm"><input class="form-check-input" type="checkbox" name="confirm" value="true"> Cancel future confirmed appointments</label>{% endif %}
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if listing_page.pages > 1 %}
+      <nav class="pagination" aria-label="Your listing pages">
+        <span class="pagination__pages">Page {{ listing_page.page }} of {{ listing_page.pages }}</span>
+        <div class="pagination__actions">
+          {% if listing_page.has_prev %}<a class="btn btn-outline btn-sm" href="{{ url_for('main.dashboard', page=listing_page.prev_num) }}">Previous</a>{% endif %}
+          {% if listing_page.has_next %}<a class="btn btn-outline btn-sm" href="{{ url_for('main.dashboard', page=listing_page.next_num) }}">Next</a>{% endif %}
+        </div>
+      </nav>
+      {% endif %}
+    {% else %}
+      <div class="empty-inline">
+        <div class="empty-state">
+          <span class="empty-state__icon">{{ icon('file', 21) }}</span>
+          <h2>No listings yet</h2>
+          <p>Describe a procedure you need a patient for. Save it as a draft, then publish when the details are confirmed with your clinic.</p>
+          <div class="empty-state__actions">
+            <a class="btn btn-primary" href="{{ url_for('student.create_listing') }}">Post an appointment listing</a>
+            <a class="btn btn-outline" href="{{ url_for('student.listing_templates') }}">Use a saved template</a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <div class="panel__head">
+      <div>
+        <h2>Requests to answer</h2>
+        <p>Confirm a time, decline, or propose another slot. Patient applications are listed separately.</p>
+      </div>
+      {% if open_request_count %}<span class="chip chip--navy">{{ open_request_count }} waiting</span>{% endif %}
+    </div>
+
+    {% if requests %}
+      <div class="request-queue">
+        {% for a in requests %}
+        <article class="request-card request-card--attention">
+          <div class="request-card__top">
+            <span class="avatar avatar--paper" aria-hidden="true">{{ a.patient.user.full_name[:1]|upper }}</span>
+            <div class="request-card__who">
+              <strong><a href="{{ url_for('main.view_profile', user_id=a.patient.user.id) }}">{{ a.patient.user.full_name }}</a></strong>
+              <span class="request-card__when">{{ a.starts_at|local_datetime('%b %d, %Y · %I:%M %p') }}</span>
+            </div>
+            {{ status_pill(a.status) }}
+          </div>
+
+          {% if a.listing %}<p class="small mb-0">{{ a.listing.title }} &middot; {{ a.location }}</p>{% endif %}
+          {% if a.proposed_at %}
+            <div class="notice">
+              {{ icon('clock') }}
+              <p>Patient suggested {{ a.proposed_at|local_datetime('%b %d · %I:%M %p') }}.</p>
+            </div>
+          {% endif %}
+
+          <div class="request-card__actions">
+            <form method="post" action="{{ url_for('student.appointment_decision', appointment_id=a.id, decision='confirm') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-primary" type="submit">{{ icon('check', 15) }} {{ 'Confirm new time' if a.status == 'reschedule_requested' else 'Confirm' }}</button>
+            </form>
+            <form method="post" action="{{ url_for('student.appointment_decision', appointment_id=a.id, decision='reject') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline" type="submit">Decline</button>
+            </form>
+          </div>
+
+          {% if a.status != 'reschedule_requested' %}
+          <details class="inline-disclosure">
+            <summary>Propose another time</summary>
+            <form method="post" action="{{ url_for('student.propose_schedule', appointment_id=a.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <label class="visually-hidden" for="suggest-{{ a.id }}">Propose another time</label>
+              <input id="suggest-{{ a.id }}" class="form-control form-control-sm" name="proposed_at" type="datetime-local" required>
+              <button class="btn btn-sm btn-outline" type="submit">Send proposal</button>
+            </form>
+          </details>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-inline">
+        <p class="mb-2"><strong>No requests waiting.</strong></p>
+        <p class="small muted mb-0">New patient requests appear here as soon as they are sent. Nothing needs your attention right now.</p>
+      </div>
+    {% endif %}
+  </article>
+</div>
+
+{% if confirmed_appointments %}
+<article class="panel mt-4">
+  <div class="panel__head">
+    <div>
+      <h2>Confirmed appointments</h2>
+      <p>Mark a visit complete after the appointment time has passed.</p>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table data-table--stack">
+      <caption class="visually-hidden">Confirmed appointments</caption>
+      <thead>
+        <tr><th scope="col">Patient</th><th scope="col">Date and time</th><th scope="col">Location</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+      </thead>
+      <tbody>
+        {% for a in confirmed_appointments %}
+        <tr>
+          <td data-label="Patient"><span class="cell-title"><a href="{{ url_for('main.view_profile', user_id=a.patient.user.id) }}">{{ a.patient.user.full_name }}</a></span></td>
+          <td data-label="Date" class="cell-date">{{ a.starts_at|local_datetime('%b %d, %Y · %I:%M %p') }}</td>
+          <td data-label="Location">{{ a.location }}</td>
+          <td data-label="Actions">
+            <div class="row-actions">
+              {% if a.starts_at <= now_utc %}
+                <form method="post" action="{{ url_for('student.appointment_decision', appointment_id=a.id, decision='complete') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline" type="submit">Mark completed</button>
+                </form>
+              {% else %}
+                <span class="small muted">Upcoming</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+{% endif %}
+
+{% include 'dashboard/_notifications.html' %}
+{% endblock %}

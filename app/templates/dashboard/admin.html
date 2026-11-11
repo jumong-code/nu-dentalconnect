@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Platform overview — NU DentalConnect{% endblock %}
+{% block content %}
+
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Operations</p>
+    <h1>Platform overview</h1>
+    <p class="page-head__lede">Live counts of accounts, published listings, and appointment activity. Every figure is read from the database.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-outline" href="{{ url_for('admin.users') }}">{{ icon('users') }} Manage accounts</a>
+    <a class="btn btn-outline" href="{{ url_for('admin.pending_students') }}">{{ icon('check') }} Student approvals</a>
+    <a class="btn btn-primary" href="{{ url_for('admin.appointments') }}">{{ icon('calendar') }} Review appointments</a>
+  </div>
+</header>
+
+<div class="stat-grid">
+  <article class="stat fade-up">
+    <p class="stat__label">Accounts</p>
+    <p class="stat__value" data-target="{{ stats.users }}" data-count-up="true">{{ stats.users }}</p>
+    <p class="stat__note">{{ stats.patients }} patients &middot; {{ stats.students }} dentistry students</p>
+  </article>
+  <article class="stat fade-up">
+    <p class="stat__label">Published listings</p>
+    <p class="stat__value" data-target="{{ stats.listings }}" data-count-up="true">{{ stats.listings }}</p>
+    <p class="stat__note">Open to patient appointment requests</p>
+  </article>
+  <article class="stat fade-up">
+    <p class="stat__label">Appointments</p>
+    <p class="stat__value" data-target="{{ stats.appointments }}" data-count-up="true">{{ stats.appointments }}</p>
+    <p class="stat__note">Requests, confirmed times, and past visits</p>
+  </article>
+  <article class="stat{% if stats.pending_students %} stat--attention{% endif %} fade-up">
+    <p class="stat__label">Students awaiting approval</p>
+    <p class="stat__value" data-target="{{ stats.pending_students }}" data-count-up="true">{{ stats.pending_students }}</p>
+    <p class="stat__note">{{ 'Review identities before approving' if stats.pending_students else 'No student waiting' }}</p>
+    <a class="link-arrow" href="{{ url_for('admin.pending_students') }}">Open approval queue {{ icon('arrow-right', 15) }}</a>
+  </article>
+  <article class="stat{% if stats.applications %} stat--attention{% endif %} fade-up">
+    <p class="stat__label">Pending applications</p>
+    <p class="stat__value" data-target="{{ stats.applications }}" data-count-up="true">{{ stats.applications }}</p>
+    <p class="stat__note">{{ 'Awaiting a student decision' if stats.applications else 'Nothing awaiting a decision' }}</p>
+  </article>
+</div>
+
+<article class="panel">
+  <div class="panel__head">
+    <div>
+      <h2>Where to act</h2>
+      <p>Each area of the platform, what it covers, and the next step.</p>
+    </div>
+  </div>
+  <ul class="ledger">
+    <li class="ledger__row">
+      <span class="ledger__icon" aria-hidden="true">{{ icon('users') }}</span>
+      <div class="ledger__body">
+        <strong>Accounts</strong>
+        <span>{{ stats.patients }} patients and {{ stats.students }} dentistry students. Deactivated accounts cannot sign in.</span>
+      </div>
+      <p class="ledger__count">{{ stats.users }}</p>
+      <a class="link-arrow" href="{{ url_for('admin.users') }}">Manage accounts {{ icon('arrow-right', 15) }}</a>
+    </li>
+    <li class="ledger__row">
+      <span class="ledger__icon" aria-hidden="true">{{ icon('file') }}</span>
+      <div class="ledger__body">
+        <strong>Published listings</strong>
+        <span>Procedures currently visible to patients in the appointment directory.</span>
+      </div>
+      <p class="ledger__count">{{ stats.listings }}</p>
+      <a class="link-arrow" href="{{ url_for('admin.listings') }}">Review listings {{ icon('arrow-right', 15) }}</a>
+    </li>
+    <li class="ledger__row">
+      <span class="ledger__icon" aria-hidden="true">{{ icon('calendar') }}</span>
+      <div class="ledger__body">
+        <strong>Appointments</strong>
+        <span>Patient requests, confirmed times, completed visits, and cancellations.</span>
+      </div>
+      <p class="ledger__count">{{ stats.appointments }}</p>
+      <a class="link-arrow" href="{{ url_for('admin.appointments') }}">Review appointments {{ icon('arrow-right', 15) }}</a>
+    </li>
+    <li class="ledger__row">
+      <span class="ledger__icon" aria-hidden="true">{{ icon('clock') }}</span>
+      <div class="ledger__body">
+        <strong>Pending applications</strong>
+        <span>Patient applications are separate from appointment requests. Students accept or reject them.</span>
+      </div>
+      <p class="ledger__count">{{ stats.applications }}</p>
+      <a class="link-arrow" href="{{ url_for('admin.listings') }}">View listings {{ icon('arrow-right', 15) }}</a>
+    </li>
+  </ul>
+</article>
+
+<div class="notice mt-4">
+  {{ icon('info') }}
+  <p>Counts refresh on every page load. The platform stores scheduling and account data only; it does not hold diagnoses or medical records.</p>
+</div>
+<p class="mt-4"><a class="btn btn-outline" href="{{ url_for('admin.audit') }}">Review audit history</a></p>
+{% endblock %}

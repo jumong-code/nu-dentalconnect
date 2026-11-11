@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, password_field %}
+{% block title %}Sign in — NU DentalConnect{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <aside class="auth-aside">
+    <img class="auth-aside__image" src="{{ url_for('static', filename='images/nu-campus.png') }}" alt="">
+    <div>
+      <p class="eyebrow eyebrow--inverse">National University</p>
+      <h2>Your appointment, in one clear thread.</h2>
+      <p>Sign in to see each request, the student's answer, and the confirmed time without searching your inbox.</p>
+      <ul class="auth-aside__list">
+        <li>{{ icon('check') }}<span>Requests stay pending until a student confirms them.</span></li>
+        <li>{{ icon('check') }}<span>Every reschedule proposal appears in your workspace.</span></li>
+        <li>{{ icon('check') }}<span>Patient applications stay separate from bookings.</span></li>
+      </ul>
+    </div>
+    <p class="auth-aside__foot">{{ icon('shield') }} Account and scheduling data only. No diagnoses or medical records.</p>
+  </aside>
+
+  <div class="auth-main">
+    <div class="auth-card">
+      <div class="auth-card__head">
+        <h1>Sign in</h1>
+        <p>Continue to your DentalConnect workspace.</p>
+      </div>
+
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.email.label(class='form-label') }}
+          {{ form.email(class='form-control' + (' is-invalid' if form.email.errors else ''), autocomplete='email', **{'aria-invalid': 'true' if form.email.errors else 'false'}) }}
+          {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+        <div class="field">
+          {{ form.password.label(class='form-label') }}
+          {{ password_field(form.password, 'password') }}
+        </div>
+
+        <div class="auth-card__meta">
+          <span class="small muted">Patients and dentistry students use the same sign-in.</span>
+          <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Sign in</button>
+      </form>
+
+      <p class="auth-switch">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+      <p class="auth-switch"><a href="{{ url_for('auth.resume_verification') }}">Resend verification code</a></p>
+      <p class="auth-assurance">{{ icon('lock') }} Sessions end after 8 hours on a shared device. Sign out when you finish.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

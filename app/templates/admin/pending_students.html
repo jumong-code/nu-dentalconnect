@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Pending Students — NU DentalConnect{% endblock %}
+{% block content %}
+
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Pending Students</h1>
+    <p class="page-head__lede">Review student accounts after they verify their email. Approval unlocks sign-in.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-outline" href="{{ url_for('admin.users') }}">{{ icon('arrow-left', 15) }} All accounts</a>
+  </div>
+</header>
+
+<article class="panel mt-4">
+  {% if students.items %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <caption class="visually-hidden">Students pending approval</caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Phone</th>
+            <th scope="col">Year Level</th>
+            <th scope="col">Campus</th>
+            <th scope="col">Registered</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students.items %}
+          <tr>
+            <td>
+              <span class="cell-title">{{ student.full_name }}</span>
+            </td>
+            <td>{{ student.email }}</td>
+            <td>{{ student.phone or '—' }}</td>
+            <td>{{ student.student_profile.year_level or '—' }}</td>
+            <td>{{ student.student_profile.campus or '—' }}</td>
+            <td class="cell-date">{{ student.created_at|local_datetime('%b %d, %Y %I:%M %p') }}</td>
+            <td class="cell-actions">
+              <div class="actions-group">
+                <form method="post" action="{{ url_for('admin.approve_student', user_id=student.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-success" type="submit">{{ icon('check', 14) }} Approve</button>
+                </form>
+                <form method="post" action="{{ url_for('admin.reject_student', user_id=student.id) }}" onsubmit="return confirm('Reject this student? Their account will be deactivated.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-danger" type="submit">{{ icon('x', 14) }} Reject</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-inline">
+      <div class="empty-state">
+        <span class="empty-state__icon">{{ icon('users', 21) }}</span>
+        <h2>No pending students</h2>
+        <p>All student accounts have been reviewed. New pending accounts will appear here.</p>
+      </div>
+    </div>
+  {% endif %}
+</article>
+
+{% if students.pages > 1 %}
+<nav class="pagination" aria-label="Pending student pages">
+  <span class="pagination__pages">Page {{ students.page }} of {{ students.pages }}</span>
+  <div class="pagination__actions">
+    {% if students.has_prev %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.pending_students', page=students.prev_num) }}">{{ icon('arrow-left', 15) }} Previous</a>
+    {% else %}
+      <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Previous</span>
+    {% endif %}
+    {% if students.has_next %}
+      <a class="btn btn-outline btn-sm" href="{{ url_for('admin.pending_students', page=students.next_num) }}">Next {{ icon('arrow-right', 15) }}</a>
+    {% else %}
+      <span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Next</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+
+{% endblock %}

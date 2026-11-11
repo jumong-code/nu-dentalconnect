@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}Saved templates — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="page-band">
+  <div class="container">
+    <a class="back-link" href="{{ url_for('main.dashboard') }}">{{ icon('arrow-left', 15) }} Back to dashboard</a>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">Reusable starters</p>
+        <h1>Appointment templates</h1>
+        <p class="page-head__lede">Built-in starters are provided for common procedures. Your saved templates are private to your account. Choose one on the appointment listing form to prefill editable fields.</p>
+      </div>
+      <div class="page-head__actions">
+        <a class="btn btn-primary" href="{{ url_for('student.create_listing') }}">{{ icon('plus') }} New listing</a>
+      </div>
+    </header>
+  </div>
+</div>
+
+<section class="section section--tint">
+  <div class="container container--narrow">
+    <!-- Built-in templates -->
+    <div class="template-group">
+      <h2 class="template-group__heading">{{ icon('book', 18) }} Built-in starters</h2>
+      <p class="template-group__note">These templates are maintained by the system. You cannot edit or delete them, but you can save a copy as your own template.</p>
+      <div class="saved-template-list">
+        {% for template in built_in %}
+        <article class="saved-template built-in-template">
+          <div>
+            <h2>{{ template.name }}</h2>
+            <p>{{ template.title }} <span aria-hidden="true">&middot;</span> {{ template.category }}</p>
+            <span class="saved-template__meta">Built-in starter <span aria-hidden="true">&middot;</span> Location: {{ template.location }}</span>
+          </div>
+          <div class="saved-template__actions">
+            <a class="btn btn-outline btn-sm" href="{{ url_for('student.create_listing') }}?template={{ template.id }}">Use this template</a>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Saved templates -->
+    <div class="template-group mt-5">
+      <h2 class="template-group__heading">{{ icon('file', 18) }} Your saved templates</h2>
+      {% if templates.items %}
+        <div class="saved-template-list">
+          {% for template in templates.items %}
+          <article class="saved-template">
+            <div>
+              <h2>{{ template.name }}</h2>
+              <p>{{ template.title }} <span aria-hidden="true">&middot;</span> {{ template.category }}</p>
+              <span class="saved-template__meta">Location: {{ template.location }} <span aria-hidden="true">&middot;</span> Saved {{ template.created_at|local_datetime('%b %d, %Y') }}</span>
+            </div>
+            <div class="saved-template__actions">
+              <a class="btn btn-outline btn-sm" href="{{ url_for('student.create_listing') }}?template={{ 'saved-' ~ template.id }}">Use</a>
+              <form method="post" action="{{ url_for('student.delete_listing_template', template_id=template.id) }}" onsubmit="return confirm('Delete this saved template?');" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline btn-sm btn-danger" type="submit">{{ icon('trash') }} Delete</button>
+              </form>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        <p class="small muted mt-4 mb-0">Deleting a template does not change any listing already saved.</p>
+        {% if templates.pages > 1 %}
+        <nav class="pagination" aria-label="Saved template pages">
+          <span class="pagination__pages">Page {{ templates.page }} of {{ templates.pages }}</span>
+          <div class="pagination__actions">
+            {% if templates.has_prev %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.listing_templates', page=templates.prev_num) }}">Previous</a>{% endif %}
+            {% if templates.has_next %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.listing_templates', page=templates.next_num) }}">Next</a>{% endif %}
+          </div>
+        </nav>
+        {% endif %}
+      {% else %}
+        <div class="empty-state">
+          <span class="empty-state__icon">{{ icon('file', 21) }}</span>
+          <h2>No saved templates yet</h2>
+          <p>Start an appointment listing, fill in the details you reuse, and save them with a name for next time.</p>
+          <div class="empty-state__actions">
+            <a class="btn btn-primary" href="{{ url_for('student.create_listing') }}">Create an appointment listing</a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

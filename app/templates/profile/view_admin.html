@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}{{ admin.full_name }} — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="container profile-page profile-page--admin">
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Administrator Profile</p>
+    <h1>{{ admin.full_name }}</h1>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-outline" href="{{ url_for('admin.users') }}">{{ icon('arrow-left', 15) }} Back to accounts</a>
+  </div>
+</header>
+
+<article class="panel mt-4 profile-card profile-card--admin">
+  <div class="profile-header profile-header--centered">
+    <div class="profile-avatar">
+      <div class="avatar avatar--large avatar--placeholder avatar--admin">{{ icon('shield', 40) }}</div>
+    </div>
+    <p class="profile-role">Administrator</p>
+  </div>
+
+  <div class="profile-details">
+    <dl class="details-list">
+      <div class="details-item">
+        <dt>{{ icon('mail', 16) }} Email</dt>
+        <dd>{{ admin.email }}</dd>
+      </div>
+      <div class="details-item">
+        <dt>{{ icon('calendar', 16) }} Joined</dt>
+        <dd>{{ admin.created_at|local_datetime('%b %d, %Y') }}</dd>
+      </div>
+      <div class="details-item">
+        <dt>{{ icon('activity', 16) }} Status</dt>
+        <dd><span class="chip chip--{{ 'success' if admin.is_active else 'muted' }}">{{ 'Active' if admin.is_active else 'Inactive' }}</span></dd>
+      </div>
+    </dl>
+  </div>
+</article>
+
+</div>
+{% endblock %}

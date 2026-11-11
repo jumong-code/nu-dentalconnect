@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}Reset password — NU DentalConnect{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <aside class="auth-aside">
+    <img class="auth-aside__image" src="{{ url_for('static', filename='images/nu-campus.png') }}" alt="">
+    <div>
+      <p class="eyebrow eyebrow--inverse">Account access</p>
+      <h2>Reset without exposing your account.</h2>
+      <p>We send a secure link only when an active account matches the email you enter.</p>
+      <ul class="auth-aside__list">
+        <li>{{ icon('mail') }}<span>The reset link expires after 30 minutes.</span></li>
+        <li>{{ icon('lock') }}<span>Your current password is never shown or sent.</span></li>
+        <li>{{ icon('shield') }}<span>If nothing arrives, the email is not registered.</span></li>
+      </ul>
+    </div>
+    <p class="auth-aside__foot">{{ icon('info') }} Check your spam folder before requesting a second link.</p>
+  </aside>
+
+  <div class="auth-main">
+    <div class="auth-card">
+      <div class="auth-card__head">
+        <h1>Reset password</h1>
+        <p>Enter your account email. If it matches an active account, we will send a secure reset link.</p>
+      </div>
+
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.email.label(class='form-label') }}
+          {{ form.email(class='form-control' + (' is-invalid' if form.email.errors else ''), autocomplete='email', **{'aria-invalid': 'true' if form.email.errors else 'false'}) }}
+          {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Send reset link</button>
+      </form>
+
+      <p class="auth-switch">Remembered it? <a href="{{ url_for('auth.login') }}">Back to sign in</a></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

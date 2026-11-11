@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}{{ listing.title }} — NU DentalConnect{% endblock %}
+{% block description %}{{ listing.description|truncate(150) }}{% endblock %}
+{% block content %}
+
+<div class="page-band">
+  <div class="container">
+    <a class="back-link" href="{{ url_for('main.opportunities') }}">{{ icon('arrow-left', 15) }} All appointment listings</a>
+    <header class="page-head">
+      <div>
+        <div class="cluster mb-3">
+          <span class="chip">{{ listing.category }}</span>
+          {% if listing.status != 'published' %}{{ status_pill(listing.status) }}{% endif %}
+        </div>
+        <h1>{{ listing.title }}</h1>
+        <p class="page-head__lede">Posted by {% if current_user.is_authenticated and current_user.role in ['patient', 'admin'] %}<a href="{{ url_for('main.view_profile', user_id=listing.student.user.id) }}">{{ listing.student.user.full_name }}</a>{% else %}{{ listing.student.user.full_name }}{% endif %} &middot; {{ listing.created_at|local_datetime('%B %d, %Y') }}</p>
+      </div>
+    </header>
+  </div>
+</div>
+
+{% if listing.cover_image %}
+<section class="section section--tint">
+  <div class="container">
+    <img src="{{ url_for('main.serve_cover', filename=listing.cover_image) }}" alt="Cover image for {{ listing.title }}" style="width:100%;max-height:400px;object-fit:cover;border-radius:8px">
+  </div>
+</section>
+{% endif %}
+
+<section class="section section--tint">
+  <div class="container detail-layout">
+    <article class="detail-main">
+      {% if listing.status != 'published' %}
+        <div class="notice notice--warning mb-4">
+          {{ icon('alert') }}
+          <p><span class="notice__title">This listing is not published.</span>Patients cannot see or request it until it is published. You are viewing it as the owner or an administrator.</p>
+        </div>
+      {% endif %}
+
+      <h2>About this procedure</h2>
+      <p class="preline">{{ listing.description }}</p>
+
+      <h2 class="mt-5">Who can request this appointment?</h2>
+      <p class="preline">{{ listing.eligibility }}</p>
+
+      <dl class="detail-meta">
+        <div>
+          <dt>Location</dt>
+          <dd>{{ listing.location }}</dd>
+        </div>
+        <div>
+          <dt>Preferred schedule</dt>
+          <dd>{{ listing.preferred_schedule }}</dd>
+        </div>
+        <div>
+          <dt>Dentistry student</dt>
+          <dd>{{ listing.student.user.full_name }}{% if listing.student.year_level %} &middot; {{ listing.student.year_level }}{% endif %}</dd>
+        </div>
+        {% if listing.student.facebook_url %}
+        <div>
+          <dt>Student link</dt>
+          <dd><a href="{{ listing.student.facebook_url }}" target="_blank" rel="noopener noreferrer">Facebook profile or page</a></dd>
+        </div>
+        {% endif %}
+      </dl>
+
+      {% if listing.student.bio %}
+        <h2 class="mt-5">About the student</h2>
+        <p class="preline">{{ listing.student.bio }}</p>
+      {% endif %}
+    </article>
+
+    <aside class="apply-panel" aria-labelledby="apply-title">
+      <h2 id="apply-title">Request an appointment</h2>
+      <p>Choose one date and time to send your request. The appointment is not booked until the student confirms it.</p>
+
+      <div class="notice mb-4">
+        {{ icon('info') }}
+        <p><span class="notice__title">A request is not a booking.</span>The student can confirm your time or propose another one.</p>
+      </div>
+
+      {% if current_user.is_authenticated and current_user.role == 'patient' %}
+        <a class="btn btn-primary btn-block" href="{{ url_for('patient.request_appointment', listing_id=listing.id) }}">{{ icon('calendar') }} Choose a date and time</a>
+
+        {% if application_status %}
+        <div class="application-confirmation mt-4" role="status">
+          {{ icon('check-circle', 18) }}
+          <div><strong>Application already sent</strong><span>Status: {{ application_status|replace('_', ' ')|title }}</span></div>
+        </div>
+        {% else %}
+        <details class="inline-disclosure mt-4">
+          <summary>Apply without choosing a time</summary>
+          <p class="small muted mt-2">Send the student a patient application first. You can request an appointment separately at any time.</p>
+          <form method="post" action="{{ url_for('patient.apply', listing_id=listing.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="message" class="form-label">Message <span class="muted">(optional)</span></label>
+            <textarea id="message" name="message" class="form-control" rows="3" maxlength="1000" placeholder="Tell the student why you're interested"></textarea>
+            <button class="btn btn-outline btn-block mt-3" type="submit">Send patient application</button>
+          </form>
+        </details>
+        {% endif %}
+      {% elif current_user.is_authenticated %}
+        <div class="notice notice--warning">
+          {{ icon('alert') }}
+          <p>You are signed in as a <strong>{{ current_user.role }}</strong>. Only patient accounts can request appointments. <a href="{{ url_for('auth.login') }}">Sign in as a patient</a> or <a href="{{ url_for('auth.register') }}">create a patient account</a> to continue.</p>
+        </div>
+      {% else %}
+        <a class="btn btn-primary btn-block" href="{{ url_for('auth.register') }}">Create a patient account</a>
+        <a class="btn btn-outline btn-block" href="{{ url_for('auth.login') }}">Sign in as a patient</a>
+        <p class="small muted mt-3 mb-0">Registration is free and takes one step. You can browse before creating an account.</p>
+      {% endif %}
+    </aside>
+  </div>
+</section>
+{% endblock %}

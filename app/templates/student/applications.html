@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Patient applications — {{ listing.title }}{% endblock %}
+{% block content %}
+
+<div class="page-band">
+  <div class="container">
+    <a class="back-link" href="{{ url_for('main.dashboard') }}">{{ icon('arrow-left', 15) }} Student dashboard</a>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">Patient applications</p>
+        <h1>{{ listing.title }}</h1>
+        <p class="page-head__lede">These patients asked to be considered for this procedure without selecting an appointment time.</p>
+      </div>
+      <div class="page-head__actions d-flex flex-wrap align-items-center gap-2">
+        {{ status_pill(listing.status) }}
+        <a class="btn btn-outline" href="{{ url_for('student.edit_listing', listing_id=listing.id) }}">{{ icon('file') }} Edit listing</a>
+      </div>
+    </header>
+  </div>
+</div>
+
+<section class="section section--tint applications-page">
+  <div class="container container--narrow">
+    <div class="notice mb-4">
+      {{ icon('info') }}
+      <p><span class="notice__title">An application is not a booking.</span>Accepting tells the patient you will consider them. They still request a specific appointment time separately.</p>
+    </div>
+
+    {% for a in applications %}
+    <article class="applicant">
+      <div class="applicant__head">
+        <div class="applicant__person d-flex align-items-center gap-3">
+          <span class="avatar avatar--paper" aria-hidden="true">{{ a.patient.user.full_name[:1]|upper }}</span>
+          <div>
+            <h2><a href="{{ url_for('main.view_profile', user_id=a.patient.user.id) }}">{{ a.patient.user.full_name }}</a></h2>
+            <p class="applicant__contact">{{ a.patient.user.email }}{% if a.patient.user.phone %} &middot; {{ a.patient.user.phone }}{% endif %}</p>
+          </div>
+        </div>
+        {{ status_pill(a.status) }}
+      </div>
+
+      {% if a.message %}
+        <p class="applicant__message preline">{{ a.message }}</p>
+      {% else %}
+        <p class="small muted">No message included with this application.</p>
+      {% endif %}
+
+      <div class="split d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <span class="small muted">Applied {{ a.created_at|local_datetime('%b %d, %Y · %I:%M %p') }}</span>
+        {% if a.status == 'pending' %}
+          <div class="applicant__actions d-flex flex-wrap gap-2">
+            {% for decision in ['accepted', 'rejected'] %}
+              <form method="post" action="{{ url_for('student.application_decision', application_id=a.id, decision=decision) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm {{ 'btn-primary' if decision == 'accepted' else 'btn-outline' }}" type="submit">
+                  {{ 'Accept application' if decision == 'accepted' else 'Reject' }}
+                </button>
+              </form>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </article>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-state__icon">{{ icon('users', 21) }}</span>
+        <h2>No patient applications yet</h2>
+        <p>Patients can apply from your published listing without choosing a time. Applications will appear here for review.</p>
+        <div class="empty-state__actions">
+          <a class="btn btn-primary" href="{{ url_for('student.edit_listing', listing_id=listing.id) }}">Review listing status</a>
+          <a class="btn btn-outline" href="{{ url_for('main.opportunities') }}">See patient view</a>
+        </div>
+      </div>
+    {% endfor %}
+    {% if applications.pages > 1 %}
+    <nav class="pagination" aria-label="Application pages">
+      <span class="pagination__pages">Page {{ applications.page }} of {{ applications.pages }}</span>
+      <div class="pagination__actions">
+        {% if applications.has_prev %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.listing_applications', listing_id=listing.id, page=applications.prev_num) }}">Previous</a>{% endif %}
+        {% if applications.has_next %}<a class="btn btn-outline btn-sm" href="{{ url_for('student.listing_applications', listing_id=listing.id, page=applications.next_num) }}">Next</a>{% endif %}
+      </div>
+    </nav>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}{{ student.full_name }} — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="container profile-page profile-page--student">
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Student Profile</p>
+    <h1>{{ student.full_name }}</h1>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-outline" href="{{ url_for('main.dashboard') }}">{{ icon('arrow-left', 15) }} Back</a>
+  </div>
+</header>
+
+<article class="panel mt-4 profile-card profile-card--student">
+  <div class="profile-header">
+    <div class="profile-avatar-wrapper">
+      {% if student.student_profile and student.student_profile.avatar_image %}
+        <img src="{{ url_for('main.serve_avatar', filename=student.student_profile.avatar_image) }}" alt="" class="avatar avatar--large">
+      {% else %}
+        <div class="avatar avatar--large avatar--placeholder avatar--student">{{ icon('graduation-cap', 40) }}</div>
+      {% endif %}
+      <span class="avatar-badge avatar-badge--student" aria-label="Dentistry Student">{{ icon('award', 14) }}</span>
+    </div>
+    <div class="profile-meta">
+      <p class="profile-role">{{ fields.year_level or 'Year level not set' }}</p>
+      <p class="profile-campus">{{ icon('map-pin', 14) }} {{ fields.campus or 'Campus not set' }}</p>
+    </div>
+  </div>
+
+  <div class="profile-divider"></div>
+
+  {% if fields.bio %}
+  <div class="profile-section">
+    <h3 class="profile-section__title">{{ icon('message-square', 16) }} About</h3>
+    <p class="profile-bio">{{ fields.bio }}</p>
+  </div>
+  {% endif %}
+
+  {% if fields.facebook_url %}
+  <div class="profile-section">
+    <h3 class="profile-section__title">{{ icon('facebook', 16) }} Social</h3>
+    <p><a href="{{ fields.facebook_url }}" target="_blank" rel="noopener">{{ fields.facebook_url }}</a></p>
+  </div>
+  {% endif %}
+
+  {% if fields.published_listings %}
+  <div class="profile-divider"></div>
+  <div class="profile-section">
+    <h3 class="profile-section__title">{{ icon('clipboard-list', 16) }} Available Appointments</h3>
+    <div class="listing-grid">
+      {% for listing in fields.published_listings %}
+      <a href="{{ url_for('main.opportunity_detail', listing_id=listing.id) }}" class="listing-card">
+        <div class="listing-card__image">
+          {% if listing.cover_image %}
+            <img src="{{ url_for('main.serve_cover', filename=listing.cover_image) }}" alt="">
+          {% else %}
+            <div class="listing-placeholder">{{ icon('image', 28) }}</div>
+          {% endif %}
+        </div>
+        <div class="listing-card__content">
+          <h4 class="listing-card__title">{{ listing.title }}</h4>
+          <p class="listing-card__category">{{ listing.category }}</p>
+          <p class="listing-card__location">{{ icon('map-pin', 14) }} {{ listing.location }}</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</article>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Resume verification — NU DentalConnect{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="auth-main auth-main--center">
+    <div class="auth-card">
+      <div class="auth-card__head">
+        <h1>Resume email verification</h1>
+        <p>Enter the email address for your unverified account. If it exists and is unverified, we'll send a new code.</p>
+      </div>
+      <form method="post" action="{{ url_for('auth.resume_verification') }}">
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.email.label(class='form-label') }}
+          {{ form.email(class='form-control' + (' is-invalid' if form.email.errors else ''), autocomplete='email', **{'aria-invalid': 'true' if form.email.errors else 'false'}) }}
+          {% for error in form.email.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Send verification code</button>
+      </form>
+      <div class="auth-notice auth-notice--info">
+        <svg class="auth-notice__icon" aria-hidden="true"><use href="#icon-info"></use></svg>
+        <p>Didn't receive the code? Check your <strong>spam or junk folder</strong>. Some email providers may filter automated messages.</p>
+      </div>
+      <p class="auth-switch mt-3"><a href="{{ url_for('auth.login') }}">Return to sign in</a></p>
+      <p class="auth-switch"><a href="{{ url_for('auth.register') }}">Create a new account</a></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

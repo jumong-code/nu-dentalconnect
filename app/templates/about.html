@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}About the project — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="page-head--inverse about-head">
+  <div class="container container--narrow">
+    <p class="eyebrow eyebrow--inverse">Academic project</p>
+    <h1>About NU DentalConnect</h1>
+    <p>A student project concept for coordinating procedure listings and appointment requests between patients and dentistry students.</p>
+  </div>
+</div>
+
+<section class="section section--tint">
+  <div class="container about-layout">
+    <article class="about-copy">
+      <img class="about-campus" src="{{ url_for('static', filename='images/nu-campus.png') }}" alt="National University campus building with a geometric façade">
+      <h2>Appointments, with a clear next step.</h2>
+      <p>Dentistry students publish the procedures they need patients for. Patients review a listing, request a time, and see when the student confirms it or suggests another one.</p>
+      <p>Patient applications are also available for people who want to express interest before choosing an appointment time. An application and an appointment request are separate actions, and neither one books a visit on its own.</p>
+      <p>DentalConnect is an academic project concept. Campus authorization, service details, and clinical requirements should be confirmed with the institution before the platform is used for real appointments.</p>
+
+      <h2 class="mt-5">What the platform stores</h2>
+      <p>Account details, procedure listings, appointment requests, and notifications. It does not store diagnoses, treatment notes, or medical records, so keep clinical information out of listing and application text.</p>
+
+      <div class="notice">
+        {{ icon('info') }}
+        <p><span class="notice__title">A request is not a booking.</span>Students confirm each appointment time, and conflict checks use one-hour slots. Actual clinic duration and scheduling policy must be confirmed locally.</p>
+      </div>
+    </article>
+
+    <aside class="developer-panel">
+      <div class="developer-panel__head">
+        <span class="developer-mark" aria-hidden="true">NU</span>
+        <div>
+          <h2>Student developers</h2>
+          <p>Project team credits</p>
+        </div>
+      </div>
+      <ul class="developer-list" aria-label="Developer student names">
+        <li>Developer-student name will be added here.</li>
+        <li>[Developer-student name]</li>
+        <li>[Developer-student name]</li>
+        <li>[Developer-student name]</li>
+      </ul>
+      <p class="developer-note">Replace these placeholders with the project team's names before submission or defense.</p>
+    </aside>
+  </div>
+</section>
+{% endblock %}

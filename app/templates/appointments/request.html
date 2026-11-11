@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}Request appointment — NU DentalConnect{% endblock %}
+{% block content %}
+
+<div class="page-band">
+  <div class="container">
+    <a class="back-link" href="{{ url_for('main.opportunity_detail', listing_id=listing.id) }}">{{ icon('arrow-left', 15) }} Back to procedure details</a>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">Appointment request</p>
+        <h1>{{ listing.title }}</h1>
+        <p class="page-head__lede">{{ listing.category }} &middot; {{ listing.location }} &middot; Preferred schedule: {{ listing.preferred_schedule }}</p>
+      </div>
+    </header>
+  </div>
+</div>
+
+<section class="section section--tint">
+  <div class="container request-layout">
+    <div class="panel request-form-panel">
+      <h2>Choose a date and time</h2>
+      <p>This sends a request to {{ listing.student.user.full_name }}. The appointment is not confirmed until the student accepts a time.</p>
+
+      <div class="notice mb-4">
+        {{ icon('clock') }}
+        <p><span class="notice__title">One hour per appointment.</span>Slots are checked for conflicts. Choose a time inside the listing's preferred schedule where possible.</p>
+      </div>
+
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="field">
+          {{ form.starts_at.label(class='form-label') }}
+          {{ form.starts_at(class='form-control' + (' is-invalid' if form.starts_at.errors else ''), min='', **{'aria-invalid': 'true' if form.starts_at.errors else 'false'}) }}
+          <span class="form-help">Choose a date and time that works with the clinic's schedule.</span>
+          {% for error in form.starts_at.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="field">
+          {{ form.note.label(class='form-label') }}
+          {{ form.note(class='form-control' + (' is-invalid' if form.note.errors else ''), rows=4, **{'aria-invalid': 'true' if form.note.errors else 'false'}) }}
+          <span class="form-help">Optional. Share availability context only — do not include diagnoses or medical records.</span>
+          {% for error in form.note.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-actions">
+          <a class="btn btn-outline" href="{{ url_for('main.opportunity_detail', listing_id=listing.id) }}">Cancel</a>
+          <button class="btn btn-primary" type="submit">Send appointment request</button>
+        </div>
+      </form>
+    </div>
+
+    <aside class="stack">
+      <div class="summary-card">
+        <h2>Request summary</h2>
+        <ul class="summary-list">
+          <li>{{ icon('file', 16) }}<div><span>Procedure</span>{{ listing.title }}</div></li>
+          <li>{{ icon('map-pin', 16) }}<div><span>Location</span>{{ listing.location }}</div></li>
+          <li>{{ icon('clock', 16) }}<div><span>Preferred schedule</span>{{ listing.preferred_schedule }}</div></li>
+          <li>{{ icon('user', 16) }}<div><span>Dentistry student</span>{{ listing.student.user.full_name }}</div></li>
+        </ul>
+      </div>
+
+      <div class="request-explainer">
+        <h2>What happens next?</h2>
+        <ol class="stepper">
+          <li>
+            <span class="stepper__dot" aria-hidden="true">1</span>
+            <div><strong>Your request is sent</strong><p>The student receives the date and time you selected.</p></div>
+          </li>
+          <li>
+            <span class="stepper__dot" aria-hidden="true">2</span>
+            <div><strong>The student responds</strong><p>They confirm your time or propose a different one.</p></div>
+          </li>
+          <li>
+            <span class="stepper__dot" aria-hidden="true">3</span>
+            <div><strong>You see the status</strong><p>Follow the answer and manage the appointment from your dashboard.</p></div>
+          </li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

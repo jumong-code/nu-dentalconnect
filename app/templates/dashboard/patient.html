@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, status_pill %}
+{% block title %}Patient dashboard — NU DentalConnect{% endblock %}
+{% block content %}
+
+{% set upcoming = appointments|selectattr('status', 'in', ['confirmed', 'pending', 'reschedule_requested'])|sort(attribute='starts_at')|first %}
+
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Your care</p>
+    <h1>Welcome, {{ current_user.full_name.split()[0] }}.</h1>
+    <p class="page-head__lede">Track appointment requests and patient applications in one place.</p>
+  </div>
+  <div class="page-head__actions">
+    <a class="btn btn-primary" href="{{ url_for('main.opportunities') }}">{{ icon('search') }} Browse appointments</a>
+  </div>
+</header>
+
+{% if upcoming %}
+<section class="next-up" aria-labelledby="next-up-title">
+  <div class="next-up__date" aria-hidden="true">
+    <span class="next-up__month">{{ upcoming.starts_at|local_datetime('%b') }}</span>
+    <span class="next-up__day">{{ upcoming.starts_at|local_datetime('%d') }}</span>
+  </div>
+  <div>
+    {{ status_pill(upcoming.status) }}
+    <h2 id="next-up-title">{{ upcoming.listing.title if upcoming.listing else 'Dental appointment' }}</h2>
+    <p class="next-up__meta">
+      <span>{{ icon('clock', 15) }} {{ upcoming.starts_at|local_datetime('%A, %B %d at %I:%M %p') }}</span>
+      <span>{{ icon('map-pin', 15) }} {{ upcoming.location }}</span>
+    </p>
+    {% if upcoming.status == 'reschedule_requested' and upcoming.proposed_at %}
+      <p class="next-up__meta mt-2 mb-0">A new time was proposed: {{ upcoming.proposed_at|local_datetime('%b %d at %I:%M %p') }}. Accept it from the table below.</p>
+    {% endif %}
+    <div class="next-up__actions">
+      <a class="btn btn-sm btn-gold" href="#appointments">Review this appointment</a>
+    </div>
+  </div>
+</section>
+{% else %}
+<div class="notice mt-0">
+  {{ icon('calendar') }}
+  <p><span class="notice__title">No upcoming appointment.</span>Browse open procedures and request a time when one matches your needs.</p>
+</div>
+{% endif %}
+
+<div class="dashboard-grid mt-4" id="appointments">
+  <article class="panel">
+    <div class="panel__head">
+      <div>
+        <h2>Appointments</h2>
+        <p>You will see the student's answer here. A request is not a booking.</p>
+      </div>
+    </div>
+
+    {% if appointments %}
+      <div class="table-wrap">
+        <table class="data-table data-table--stack">
+          <caption class="visually-hidden">Your appointments</caption>
+          <thead>
+            <tr><th scope="col">Procedure</th><th scope="col">Date and time</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+          </thead>
+          <tbody>
+            {% for a in appointments %}
+            <tr>
+              <td data-label="Procedure">
+                <span class="cell-title">{{ a.listing.title if a.listing else 'Appointment' }}</span>
+                <span class="cell-meta">{{ a.location }}</span>
+              </td>
+              <td data-label="Date" class="cell-date">
+                {{ a.starts_at|local_datetime('%b %d, %Y · %I:%M %p') }}
+                <span class="cell-meta">with <a href="{{ url_for('main.view_profile', user_id=a.student.user.id) }}">{{ a.student.user.full_name }}</a></span>
+                {% if a.proposed_at %}<span class="cell-meta">Proposed: {{ a.proposed_at|local_datetime('%b %d · %I:%M %p') }}</span>{% endif %}
+              </td>
+              <td data-label="Status">{{ status_pill(a.status) }}</td>
+              <td data-label="Actions">
+                <div class="row-actions">
+                  {% if a.status == 'reschedule_requested' and a.proposed_at %}
+                    <form method="post" action="{{ url_for('patient.accept_proposal', appointment_id=a.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-primary" type="submit">Accept proposed time</button>
+                    </form>
+                  {% endif %}
+                  {% if a.status in ['pending', 'confirmed'] and a.starts_at > now_utc %}
+                    <details class="inline-disclosure">
+                      <summary>Request another time</summary>
+                      <form method="post" action="{{ url_for('patient.reschedule', appointment_id=a.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <label class="visually-hidden" for="new-time-{{ a.id }}">Propose another time</label>
+                        <input class="form-control form-control-sm" id="new-time-{{ a.id }}" name="starts_at" type="datetime-local" required>
+                        <button class="btn btn-sm btn-outline" type="submit">Send</button>
+                      </form>
+                    </details>
+                  {% endif %}
+                  {% if a.can_cancel() %}
+                    <form method="post" action="{{ url_for('patient.cancel_appointment', appointment_id=a.id) }}" onsubmit="return confirm('Cancel this appointment?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-quiet btn-quiet--danger" type="submit">Cancel appointment</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-inline">
+        <div class="empty-state">
+          <span class="empty-state__icon">{{ icon('calendar', 21) }}</span>
+          <h2>No appointment requests yet</h2>
+          <p>Browse the directory and choose a procedure. You can request one time per listing.</p>
+          <div class="empty-state__actions">
+            <a class="btn btn-primary" href="{{ url_for('main.opportunities') }}">Browse appointment listings</a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <div class="panel__head">
+      <div>
+        <h2>Patient applications</h2>
+        <p>These ask a student to consider you. They do not book an appointment.</p>
+      </div>
+    </div>
+
+    {% if applications %}
+      <ul class="activity-list">
+        {% for a in applications %}
+        <li class="activity-item">
+          <span class="activity-item__mark" aria-hidden="true"></span>
+          <div class="flex-grow-1">
+            <strong>{{ a.listing.title }}</strong>
+            <div class="cluster mt-1">
+              {{ status_pill(a.status) }}
+              <span class="activity-item__meta">{{ a.created_at|local_datetime('%b %d, %Y') }}</span>
+            </div>
+            {% if a.status == 'pending' %}
+              <form method="post" action="{{ url_for('patient.withdraw', application_id=a.id) }}" class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-quiet" type="submit">Withdraw application</button>
+              </form>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-inline">
+        <p class="mb-2"><strong>No applications sent.</strong></p>
+        <p class="small muted mb-0">Applications let a student know you are interested before you pick a time. They are optional.</p>
+      </div>
+    {% endif %}
+  </article>
+</div>
+
+{% include 'dashboard/_notifications.html' %}
+{% endblock %}

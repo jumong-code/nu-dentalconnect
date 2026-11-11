@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}NU DentalConnect — Find a dental appointment{% endblock %}
+{% block description %}Browse dental procedures that dentistry students are seeking patients for, request a time, and follow the student's response.{% endblock %}
+{% block content %}
+
+<section class="hero" aria-labelledby="hero-title">
+  <img class="hero__image" src="{{ url_for('static', filename='images/nu-campus.png') }}" alt="NU's geometric campus building under a clear blue sky">
+  <div class="hero__wash" aria-hidden="true"></div>
+  <div class="container hero__inner">
+    <div class="hero__copy">
+      <p class="eyebrow eyebrow--inverse">National University &middot; Dentistry student recruitment</p>
+      <h1 id="hero-title">Appointments start with a conversation.</h1>
+      <p class="hero__lede">Find procedures dentistry students are seeking patients for. Request a time that works for you, then follow the student's response in your account.</p>
+
+      <form class="hero__search" method="get" action="{{ url_for('main.opportunities') }}" role="search">
+        <label class="visually-hidden" for="home-search">Search appointment listings</label>
+        <input id="home-search" name="q" type="search" placeholder="Try a procedure or service" autocomplete="off">
+        <button class="btn btn-gold" type="submit">{{ icon('search') }} Find an appointment</button>
+      </form>
+
+      <a class="hero__student-link" href="{{ url_for('auth.register') }}">Are you a dentistry student? <span>Create a student account</span></a>
+
+      <ul class="hero__proof">
+        <li>Requests stay pending until the student confirms.</li>
+        <li>One-hour slots are checked for conflicts.</li>
+        <li>No diagnoses or medical records are stored.</li>
+      </ul>
+    </div>
+    <div class="hero__aside">
+      <p class="hero__caption">National University<br>MOA Campus</p>
+    </div>
+  </div>
+</section>
+
+<section class="route" id="how-it-works" aria-labelledby="route-title">
+  <div class="container route__inner">
+    <div class="route__intro">
+      <p class="eyebrow">How a request moves</p>
+      <h2 id="route-title">A request is a first step, not a confirmed booking.</h2>
+      <p>You always know where your appointment stands: sent, answered, or confirmed.</p>
+    </div>
+    <ol class="route__steps">
+      <li>
+        <span class="route__num" aria-hidden="true">01</span>
+        <strong>Choose a procedure</strong>
+        <p>Compare the listing details, location, and preferred appointment windows.</p>
+      </li>
+      <li>
+        <span class="route__num" aria-hidden="true">02</span>
+        <strong>Request a time</strong>
+        <p>Send one date and time. The request goes straight to the dentistry student.</p>
+      </li>
+      <li>
+        <span class="route__num" aria-hidden="true">03</span>
+        <strong>Get a response</strong>
+        <p>The student confirms your slot or proposes another time you can accept.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section section--tint" aria-labelledby="listings-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Open procedures</p>
+        <h2 id="listings-title">Appointments to explore</h2>
+        <p>Current listings from dentistry students who need a patient for a supervised procedure.</p>
+      </div>
+      <a class="link-arrow" href="{{ url_for('main.opportunities') }}">Browse all appointments {{ icon('arrow-right', 16) }}</a>
+    </div>
+
+    {% if listings %}
+      <div class="listing-grid">
+        {% for listing in listings %}{% include 'recruitment/_card.html' %}{% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-state__icon">{{ icon('calendar', 21) }}</span>
+        <h2>No procedures are open right now.</h2>
+        <p>New listings appear here as students publish them. Browse the full directory, or create an account to request a time when a procedure matches.</p>
+        <div class="empty-state__actions">
+          <a class="btn btn-primary" href="{{ url_for('main.opportunities') }}">Browse appointment listings</a>
+          <a class="btn btn-outline" href="{{ url_for('auth.register') }}">Create an account</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="paths" aria-labelledby="paths-title">
+  <div class="container paths__inner">
+    <div class="paths__intro">
+      <p class="eyebrow eyebrow--inverse">Two perspectives</p>
+      <h2 id="paths-title">One appointment process. Two ways in.</h2>
+      <p>Patients choose a time and track the answer. Dentistry students publish procedures and manage every request in one queue.</p>
+    </div>
+    <div class="paths__cards">
+      <a class="path-card" href="{{ url_for('auth.register') }}">
+        <span>
+          <span class="path-card__role">For patients</span>
+          <strong>Find a procedure and request a time</strong>
+          <p>Compare open listings, send one request, and see the student's decision.</p>
+        </span>
+        {{ icon('arrow-up-right', 20) }}
+      </a>
+      <a class="path-card" href="{{ url_for('auth.register') }}">
+        <span>
+          <span class="path-card__role">For dentistry students</span>
+          <strong>Post a listing and coordinate appointments</strong>
+          <p>Publish the procedures you need patients for, then review applications and requests.</p>
+        </span>
+        {{ icon('arrow-up-right', 20) }}
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--white" aria-labelledby="faq-title">
+  <div class="container faq">
+    <div class="faq__intro">
+      <p class="eyebrow">Good to know</p>
+      <h2 id="faq-title">Clear expectations make requests easier.</h2>
+      <p>What an appointment listing is, and what happens after you send a request.</p>
+    </div>
+    <div class="faq__list">
+      <details>
+        <summary>What is an appointment listing?</summary>
+        <p>It describes a procedure a dentistry student needs a patient for, including the clinic location, preferred schedule, and who can take part.</p>
+      </details>
+      <details>
+        <summary>Is my appointment booked when I request a time?</summary>
+        <p>No. Your request is pending until the student confirms it. They may suggest another time for you to accept instead.</p>
+      </details>
+      <details>
+        <summary>Can I contact a student without choosing a time?</summary>
+        <p>Yes. You can send a patient application from any listing. An application does not book an appointment, and it stays separate from your requests.</p>
+      </details>
+      <details>
+        <summary>Is this an official NU dental clinic service?</summary>
+        <p>{{ authorization_notice }} Clinical details and final eligibility are confirmed by the supervising clinic.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band" aria-labelledby="cta-title">
+  <div class="container cta-band__inner">
+    <div>
+      <p class="eyebrow">Ready when you are</p>
+      <h2 id="cta-title">Start with a procedure. Keep every answer in one place.</h2>
+      <p>Create an account to request a time and follow confirmations from your own workspace.</p>
+    </div>
+    <div class="cta-band__actions">
+      <a class="btn btn-dark btn-lg" href="{{ url_for('auth.register') }}">Create an account</a>
+      <a class="btn btn-outline btn-lg" href="{{ url_for('main.opportunities') }}">Browse appointments</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

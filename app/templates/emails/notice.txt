@@ -1,0 +1,10 @@
+NU DentalConnect update
+
+Hello {{ user.full_name }},
+
+{{ message }}
+
+Sign in to NU DentalConnect to review the details. If you did not expect this message, you can ignore it.
+
+---
+(c) {{ now.year }} NU DentalConnect. This is an automated message; do not reply.
