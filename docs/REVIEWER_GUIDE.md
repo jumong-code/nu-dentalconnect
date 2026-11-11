@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/nu-logo.svg" width="220">
+  <img src="assets/nu-logo.svg" width="220">
 
 <h1>Reviewer guide</h1>
 
