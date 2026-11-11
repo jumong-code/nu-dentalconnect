@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/nu-logo.svg" width="230">
+  <img src="docs/assets/nu-logo.svg" width="220">
 
 <h1>Install and run</h1>
 
