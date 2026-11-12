@@ -7,7 +7,7 @@
 </div>
 
 [README](../README.md) · [INSTALL](../INSTALL.md) · [User guide](USER_GUIDE.md) ·
-[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](SECURITY.md) ·
+[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](CYBERSECURITY.md) ·
 [Reviewer guide](REVIEWER_GUIDE.md) · [Design](DESIGN.md)
 
 > [!NOTE]
@@ -124,5 +124,5 @@ password.
 ---
 
 [README](../README.md) · [INSTALL](../INSTALL.md) · [User guide](USER_GUIDE.md) ·
-[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](SECURITY.md) ·
+[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](CYBERSECURITY.md) ·
 [Reviewer guide](REVIEWER_GUIDE.md) · [Design](DESIGN.md)

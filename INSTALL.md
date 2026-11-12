@@ -8,7 +8,7 @@
 
 [README](README.md) · [INSTALL](INSTALL.md) · [User guide](docs/USER_GUIDE.md) ·
 [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE.md) ·
-[Security](docs/SECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
+[Security](docs/CYBERSECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
 [Design](docs/DESIGN.md)
 
 > [!NOTE]
@@ -18,7 +18,7 @@
 
 ## Prerequisites
 
-- Windows PowerShell and Python available as `python` on `PATH`.
+- Windows PowerShell and Python available as `python` (or the `py` launcher) on `PATH`.
 - MySQL Server 8.4.7 and a database account with permission to create and
   migrate the app schema. Database character set: `utf8mb4`.
 - Network access to install packages from `requirements.txt` on first setup.
@@ -31,20 +31,59 @@ Flask-SQLAlchemy `>=3.1,<4.0`, Flask-Migrate `>=4.0,<5.0`, and PyMySQL
 is assumed to exist. The `first_time_startup.ps1` startup script creates `.venv/` when
 it is missing.
 
+## Quick start with `launch.bat`
+
+The easiest way to run everything is `launch.bat` in the project root. Double-click
+it (or run it from a terminal opened in the project folder) to open a menu:
+
+| Option | Action | Runs |
+| --- | --- | --- |
+| `1` | First Time Startup | `first_time_startup.ps1` |
+| `2` | Start Debug | `start_debug.ps1` |
+| `3` | Start Production | `start_production.ps1` |
+| `4` | Quit | Closes the launcher |
+
+`launch.bat` starts each script with `-NoProfile -ExecutionPolicy Bypass`, so you
+do not need to change your PowerShell execution policy. The PowerShell window
+stays open afterwards, so you can read any output or error message.
+
+On a fresh checkout, choose **`1`** first. After that, use **`2`** or **`3`** for
+every later start.
+
+> [!TIP]
+> **If you run into issues, run as administrator.** Close the launcher, then
+> right-click `launch.bat` and choose **Run as administrator**. See
+> [Running as administrator](#running-as-administrator) for when this helps.
+
 ## First-time setup wizard
 
-Run `first_time_startup.ps1` from the project root. This all-in-one wizard creates
+Choose option `1` in `launch.bat`, or run `first_time_startup.ps1` from the project
+root. This all-in-one wizard creates
 .venv if needed, installs requirements, and copies .env.example to .env only if
 .env does not already exist. If it creates .env, open Notepad so you can
 set the database URL, secret key and email settings. It then gives you the SQL
 to create the dentalconnect database in phpMyAdmin and runs the migrations.
 
-The wizard next offers to create the first administrator. If you accept, it
-collects the administrator details, generates SQL containing the password hash,
-and copies that SQL to the clipboard for you to run in phpMyAdmin. The wizard
+The wizard next offers to create the first administrator. You can enter the
+details yourself, use the Prefill option for quick testing, or skip this step.
+Either way, the wizard generates SQL containing the password hash and copies it
+to the clipboard for you to run in phpMyAdmin. The wizard
 then lets you start either the debug server or the Waitress server, or exit.
 This covers setup through first startup, no separate administrator command is
 needed when you create the account in the wizard.
+
+### If a step fails
+
+Each of the six steps can be retried on its own. When a step fails, the wizard
+shows the error and asks:
+
+- **`R`** to retry only the failed step. Steps that already finished are not repeated.
+- **`Q`** to quit setup. You can run the wizard again later.
+
+For example, if installing dependencies fails because the connection dropped,
+fix the connection and press `R`. The virtual environment is not recreated.
+If the database migration fails, you can correct `.env` or start MySQL first,
+then press `R`.
 
 ## Database and environment
 
@@ -94,11 +133,24 @@ The `.env.example` leaves SMTP username and password blank.
 ### Create the first administrator
 
 The normal first-run path is to accept the administrator-creation prompt in
-`first_time_startup.ps1`. It asks for the administrator's name, email, phone and
-password (at least 8 characters, confirmed twice), then generates SQL with a
-Werkzeug password hash. Run the copied SQL
-in phpMyAdmin against the dentalconnect database and return to the wizard to
-continue.
+`first_time_startup.ps1`. The prompt offers three choices:
+
+| Choice | Behavior |
+| --- | --- |
+| `Y` Yes (default) | Asks for the administrator's name, email, phone and password (at least 8 characters, confirmed twice). |
+| `P` Prefill | Uses predefined administrator details, so nothing needs to be typed. For quick, immediate testing only. |
+| `N` No | Skips administrator creation. |
+
+For `Y` and `P`, the wizard generates SQL with a Werkzeug password hash. Run the
+copied SQL in phpMyAdmin against the dentalconnect database and return to the
+wizard to continue.
+
+> [!WARNING]
+> **Prefill is for quick, immediate testing only.** Its email and password are
+> defined in `first_time_startup.ps1`, so anyone with the script can sign in as
+> that administrator. Never use the prefilled account on a public or live site.
+> Change its password or delete it before going public, and use option `Y` to
+> create a real administrator instead.
 
 If you skip administrator creation in the wizard, or are following the manual
 setup alternative, you can create one later with `flask create-admin`.
@@ -132,8 +184,9 @@ flask create-admin
 
 ## Start the site
 
-After the first-time wizard finishes, use one of these scripts for later
-starts. Both expect the wizard (or the manual setup steps) to have created
+After the first-time wizard finishes, use `launch.bat` for later starts: option
+`2` for debug or option `3` for production. You can also run the scripts directly.
+Both expect the wizard (or the manual setup steps) to have created
 .venv and installed the requirements. They do not create the environment,
 install packages, or run migrations.
 
@@ -145,8 +198,34 @@ so running Waitress alone does not enable the strict production configuration
 checks. Set APP_ENV=production when you want those checks enforced. Production
 settings then require HTTPS, secure cookies, MySQL and complete SMTP settings.
 
+## Running as administrator
+
+Administrator rights are not normally required. If the launcher or a script
+fails in a way that looks like a permissions problem, try this:
+
+1. Close the launcher and any open PowerShell window.
+2. Right-click `launch.bat` and choose **Run as administrator**.
+3. Accept the Windows prompt, then repeat the option that failed.
+
+Running as administrator often helps when:
+
+- The project folder is in a protected location (for example `C:\Program Files`
+  or the root of `C:\`) and creating `.venv` or `.env` fails with an access error.
+- Antivirus or Windows security software blocks the script from creating files
+  or starting processes.
+- Installing packages fails with a permission error.
+
+If it still fails, move the project to a normal user folder such as
+`Documents` and try again. Avoid keeping the project in a synced or read-only
+folder.
+
+> [!NOTE]
+> Run as administrator only when you hit a problem. Run the site normally once
+> setup works.
+
 ## You are done when…
 
+- [ ] `launch.bat` opens its menu and option `1` starts the first-time wizard.
 - [ ] The first-time wizard completes migrations against the intended MySQL database.
 - [ ] If you chose to create an administrator, its generated SQL runs successfully in phpMyAdmin.
 - [ ] `start_debug.ps1` prints the Flask development-server address, or
@@ -159,7 +238,11 @@ settings then require HTTPS, secure cookies, MySQL and complete SMTP settings.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| `Can't connect` / access denied during migration | MySQL service, user grant or `DATABASE_URL` is wrong. | Start MySQL, check the DB name, user, password and grant. |
+| Script is blocked, or "running scripts is disabled on this system" | PowerShell execution policy, when a `.ps1` file is run directly. | Start it through `launch.bat`, which bypasses the policy. If it still fails, [run as administrator](#running-as-administrator). |
+| Access denied, or "Permission denied" while creating `.venv`, `.env` or installing packages | The project folder is protected, or security software is blocking the script. | [Run `launch.bat` as administrator](#running-as-administrator), or move the project to a normal user folder. |
+| `Python was not found on this computer` | Python is not installed, or not on `PATH`. | Install Python 3 with **Add Python to PATH** enabled, open a new window, and run the wizard again. |
+| A setup step fails partway through | Temporary problem such as a network drop or MySQL not running. | Fix the cause, then press `R` at the prompt to retry only that step. |
+| `Can't connect` / access denied during migration | MySQL service, user grant or `DATABASE_URL` is wrong. | Start MySQL, check the DB name, user, password and grant, then press `R` to retry. |
 | `missing recruitment_listings.submission_key` | Existing schema is behind the model/migration state. | Back up first. Check `flask db current` and `flask db upgrade` against the same configured database. |
 | OTP email never arrives | SMTP is unset, blocked, or rejected. Development may log the code instead. | Check server output and SMTP host, port, TLS/SSL, username and password. In development, read `[DEV OTP]`. In production, configure SMTP. |
 | Startup says `SECRET_KEY` is missing | Production mode is active without a key. | Set `SECRET_KEY` to a long random value (32+ characters) in `.env`. |
@@ -169,5 +252,5 @@ settings then require HTTPS, secure cookies, MySQL and complete SMTP settings.
 
 [README](README.md) · [INSTALL](INSTALL.md) · [User guide](docs/USER_GUIDE.md) ·
 [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE.md) ·
-[Security](docs/SECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
+[Security](docs/CYBERSECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
 [Design](docs/DESIGN.md)

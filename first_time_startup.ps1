@@ -91,6 +91,44 @@ function Invoke-Pretty {
     Good $Done
 }
 
+function Invoke-Retry {
+    param(
+        [string]$Name,
+        [scriptblock]$Action,
+        [string]$Hint
+    )
+
+    while ($true) {
+        try {
+            & $Action
+            return
+        }
+        catch {
+            $msg = $_.Exception.Message
+            Write-Host
+            Bad "$Name failed."
+            Say $msg Yellow
+            if ($Hint) { Say $Hint Gray }
+            Write-Host
+            Write-Host "     [R] Retry this step" -ForegroundColor Cyan
+            Write-Host "     [Q] Quit setup"      -ForegroundColor DarkGray
+            Write-Host
+
+            $decision = $null
+            while (-not $decision) {
+                $c = Ask "Selection:"
+                if     ($c -match '^(r|retry)$') { $decision = "retry" }
+                elseif ($c -match '^(q|quit)$')  { $decision = "quit" }
+                else   { Say "Please enter R or Q." Yellow }
+            }
+
+            if ($decision -eq "quit") { throw "Setup stopped at: $Name" }
+            Write-Host
+            Say "Retrying: $Name" Cyan
+        }
+    }
+}
+
 try {
     Clear-Host
     Write-Host
@@ -100,34 +138,40 @@ try {
     Say "This takes about a minute. Follow the prompts below." Gray
 
     Step 1 "Python environment"
-    if (Test-Path $venvPython) {
-        Good "Virtual environment (.venv) already exists."
-    } else {
-        if (Get-Command py -ErrorAction SilentlyContinue)          { $sysPy = "py";     $pyArgs = "-3 -m venv .venv" }
-        elseif (Get-Command python -ErrorAction SilentlyContinue)  { $sysPy = "python"; $pyArgs = "-m venv .venv" }
-        else { throw "Python was not found on this computer. Install Python 3 (enable 'Add Python to PATH') and run this script again." }
-        Invoke-Pretty -Message "Creating virtual environment..." -FilePath $sysPy -ArgumentString $pyArgs -Done "Virtual environment created."
-        if (!(Test-Path $venvPython)) { throw "The virtual environment was not created. Please try again." }
+    Invoke-Retry -Name "Python environment" -Action {
+        if (Test-Path $venvPython) {
+            Good "Virtual environment (.venv) already exists."
+        } else {
+            if (Get-Command py -ErrorAction SilentlyContinue)          { $sysPy = "py";     $pyArgs = "-3 -m venv .venv" }
+            elseif (Get-Command python -ErrorAction SilentlyContinue)  { $sysPy = "python"; $pyArgs = "-m venv .venv" }
+            else { throw "Python was not found on this computer. Install Python 3 (enable 'Add Python to PATH') and run this script again." }
+            Invoke-Pretty -Message "Creating virtual environment..." -FilePath $sysPy -ArgumentString $pyArgs -Done "Virtual environment created."
+            if (!(Test-Path $venvPython)) { throw "The virtual environment was not created. Please try again." }
+        }
     }
 
     Step 2 "Dependencies"
-    if (!(Test-Path "requirements.txt")) { throw "requirements.txt was not found in this folder." }
-    Invoke-Pretty -Message "Installing dependencies (this may take a minute)..." `
-        -ArgumentString "-m pip install --disable-pip-version-check -r requirements.txt" `
-        -Done "Dependencies installed."
+    Invoke-Retry -Name "Dependencies" -Hint "Check your internet connection, then retry." -Action {
+        if (!(Test-Path "requirements.txt")) { throw "requirements.txt was not found in this folder." }
+        Invoke-Pretty -Message "Installing dependencies (this may take a minute)..." `
+            -ArgumentString "-m pip install --disable-pip-version-check -r requirements.txt" `
+            -Done "Dependencies installed."
+    }
 
     Step 3 "Environment configuration"
-    if (Test-Path ".env") {
-        Good ".env already exists. Keeping it unchanged."
-    } else {
-        if (!(Test-Path ".env.example")) { throw ".env.example was not found, so .env could not be created." }
-        Copy-Item ".env.example" ".env"
-        Good "Created .env from .env.example."
-        Say "Notepad will open next. Fill in DATABASE_URL, SECRET_KEY and your" Cyan
-        Say "email settings, then save and close it." Cyan
-        Wait-Enter "Press Enter to open Notepad"
-        Start-Process notepad.exe -ArgumentList ".env" -Wait
-        Good "Settings saved."
+    Invoke-Retry -Name "Environment configuration" -Action {
+        if (Test-Path ".env") {
+            Good ".env already exists. Keeping it unchanged."
+        } else {
+            if (!(Test-Path ".env.example")) { throw ".env.example was not found, so .env could not be created." }
+            Copy-Item ".env.example" ".env"
+            Good "Created .env from .env.example."
+            Say "Notepad will open next. Fill in DATABASE_URL, SECRET_KEY and your" Cyan
+            Say "email settings, then save and close it." Cyan
+            Wait-Enter "Press Enter to open Notepad"
+            Start-Process notepad.exe -ArgumentList ".env" -Wait
+            Good "Settings saved."
+        }
     }
 
     Step 4 "Database"
@@ -142,11 +186,50 @@ try {
     Wait-Enter "Press Enter once the database exists and .env is configured"
 
     $env:FLASK_APP = "run.py"
-    Invoke-Pretty -Message "Applying database migrations..." -ArgumentString "-m flask db upgrade" -Done "Database schema is ready."
+    Invoke-Retry -Name "Database migrations" `
+        -Hint "Make sure MySQL is running and DATABASE_URL in .env is correct (you can fix .env now, then retry)." `
+        -Action {
+            Invoke-Pretty -Message "Applying database migrations..." -ArgumentString "-m flask db upgrade" -Done "Database schema is ready."
+        }
 
     Step 5 "Administrator account"
-    $make = Ask "Create an administrator account now? (Y/n)"
-    if ($make -notmatch '^(n|no)$') {
+
+    $createAdmin = $false
+    $adminChoice = $null
+    while (-not $adminChoice) {
+        Say "Create an administrator account now?" Cyan
+        Write-Host "     [Y] Yes       - Enter administrator details manually" -ForegroundColor Green
+        Write-Host "     [P] Prefill   - Use predefined administrator details" -ForegroundColor Cyan
+        Write-Host "                     For quick, immediate testing only." -ForegroundColor Yellow
+        Write-Host "     [N] No        - Skip administrator creation" -ForegroundColor DarkGray
+        Write-Host
+        $make = Ask "Selection (Enter = Y):"
+        if     ($make -eq "" -or $make -match '^(y|yes)$') { $adminChoice = "manual" }
+        elseif ($make -match '^(p|prefill)$')              { $adminChoice = "prefill" }
+        elseif ($make -match '^(n|no)$')                   { $adminChoice = "skip" }
+        else { Say "Please enter Y, P or N." Yellow; Write-Host }
+    }
+
+    if ($adminChoice -eq "prefill") {
+        $adminName  = "Administrator"
+        $adminEmail = "admin@nu.com"
+        $adminPhone = "09123456789"
+        $pw1 = "Admin1234567"
+        $pw2 = $pw1
+        $createAdmin = $true
+
+        Write-Host
+        Good "Using predefined administrator details."
+        Say "Name:     $adminName" Cyan
+        Say "Email:    $adminEmail" Cyan
+        Say "Phone:    $adminPhone" Cyan
+        Say "Password: (predefined in this script)" Gray
+        Write-Host
+        Say "DISCLAIMER: Prefill is for quick, immediate testing only." Yellow
+        Say "These credentials are public knowledge. Do not use this account" Yellow
+        Say "on a live site, and change or delete it before going public." Yellow
+    }
+    elseif ($adminChoice -eq "manual") {
         do { $adminName = Ask "Full name:" } while (-not $adminName)
         do {
             $adminEmail = Ask "Email address:"
@@ -163,7 +246,13 @@ try {
             if ($pw1 -ne $pw2)     { Say "Passwords do not match. Please try again." Yellow; continue }
             break
         }
+        $createAdmin = $true
+    }
+    else {
+        Say "Skipping administrator account." Gray
+    }
 
+    if ($createAdmin) {
         $pyCode = @'
 import os
 from werkzeug.security import generate_password_hash
@@ -185,52 +274,55 @@ print("  (" + q(name) + ", " + q(email) + ", " + q(h) + ", 'admin', " + q(phone)
 print("   1, 1, 'approved', 0, CURRENT_TIMESTAMP);")
 '@
 
-        try {
-            $env:DC_ADMIN_NAME = $adminName
-            $env:DC_ADMIN_EMAIL = $adminEmail
-            $env:DC_ADMIN_PHONE = $adminPhone
-            $env:DC_ADMIN_PASSWORD = $pw1
-            $env:PYTHONIOENCODING = "utf-8"
-            $sqlLines = $pyCode | & $venvPython -
-            if ($LASTEXITCODE -ne 0) { throw "Could not generate the administrator SQL. Please try again." }
-        } finally {
-            Remove-Item Env:DC_ADMIN_NAME, Env:DC_ADMIN_EMAIL, Env:DC_ADMIN_PHONE, Env:DC_ADMIN_PASSWORD, Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
-            $pw1 = $null; $pw2 = $null
+        Invoke-Retry -Name "Administrator account" -Action {
+            try {
+                $env:DC_ADMIN_NAME = $adminName
+                $env:DC_ADMIN_EMAIL = $adminEmail
+                $env:DC_ADMIN_PHONE = $adminPhone
+                $env:DC_ADMIN_PASSWORD = $pw1
+                $env:PYTHONIOENCODING = "utf-8"
+                $sqlLines = $pyCode | & $venvPython -
+                if ($LASTEXITCODE -ne 0) { throw "Could not generate the administrator SQL." }
+            } finally {
+                Remove-Item Env:DC_ADMIN_NAME, Env:DC_ADMIN_EMAIL, Env:DC_ADMIN_PHONE, Env:DC_ADMIN_PASSWORD, Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
+            }
+
+            $sql = ($sqlLines -join "`n")
+            Set-Clipboard -Value $sql
+
+            Write-Host
+            Good "Administrator SQL generated."
+            Write-Host
+            foreach ($line in $sqlLines) { Write-Host ("  " + $VL + " " + $line) -ForegroundColor White }
+            Write-Host
+            Say "Copied to your clipboard. It contains a password hash, not your password." Green
+            Say "In phpMyAdmin: select 'dentalconnect' > SQL tab > paste > Go." Cyan
+            Wait-Enter "Press Enter once the statement has been run"
+            Good "Administrator account created."
         }
 
-        $sql = ($sqlLines -join "`n")
-        Set-Clipboard -Value $sql
-
-        Write-Host
-        Good "Administrator SQL generated."
-        Write-Host
-        foreach ($line in $sqlLines) { Write-Host ("  " + $VL + " " + $line) -ForegroundColor White }
-        Write-Host
-        Say "Copied to your clipboard. It contains a password hash, not your password." Green
-        Say "In phpMyAdmin: select 'dentalconnect' > SQL tab > paste > Go." Cyan
-        Wait-Enter "Press Enter once the statement has been run"
-        Good "Administrator account created."
-    } else {
-        Say "Skipping administrator account." Gray
+        $pw1 = $null; $pw2 = $null
     }
 
     Step 6 "Launch"
-    while ($true) {
-        Say "Select how to start the site:" Cyan
-        Write-Host "     [1] Debug mode       - auto-reloads on code changes" -ForegroundColor Green
-        Write-Host "     [2] Production mode  - Waitress server" -ForegroundColor Yellow
-        Write-Host "     [Q] Not now          - start later" -ForegroundColor DarkGray
-        Write-Host
-        $choice = Ask "Selection:"
-        if ($choice -eq "1")                  { & "$PSScriptRoot\start_debug.ps1"; break }
-        elseif ($choice -eq "2")              { & "$PSScriptRoot\start_production.ps1"; break }
-        elseif ($choice -match '^(q|quit)$')  {
+    Invoke-Retry -Name "Launch" -Action {
+        while ($true) {
+            Say "Select how to start the site:" Cyan
+            Write-Host "     [1] Debug mode       - auto-reloads on code changes" -ForegroundColor Green
+            Write-Host "     [2] Production mode  - Waitress server" -ForegroundColor Yellow
+            Write-Host "     [Q] Not now          - start later" -ForegroundColor DarkGray
             Write-Host
-            Box @("", "Setup complete", "Start later with start_debug.ps1", "or start_production.ps1", "") "Green" "White"
-            Write-Host
-            break
+            $choice = Ask "Selection:"
+            if ($choice -eq "1")                  { & "$PSScriptRoot\start_debug.ps1"; break }
+            elseif ($choice -eq "2")              { & "$PSScriptRoot\start_production.ps1"; break }
+            elseif ($choice -match '^(q|quit)$')  {
+                Write-Host
+                Box @("", "Setup complete", "Start later with start_debug.ps1", "or start_production.ps1", "") "Green" "White"
+                Write-Host
+                break
+            }
+            else { Say "Please enter 1, 2 or Q." Yellow; Write-Host }
         }
-        else { Say "Please enter 1, 2 or Q." Yellow; Write-Host }
     }
 
 } catch {

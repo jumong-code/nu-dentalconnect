@@ -7,7 +7,7 @@
 </div>
 
 [README](../README.md) · [INSTALL](../INSTALL.md) · [User guide](USER_GUIDE.md) ·
-[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](SECURITY.md) ·
+[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](CYBERSECURITY.md) ·
 [Reviewer guide](REVIEWER_GUIDE.md) · [Design](DESIGN.md)
 
 > [!NOTE]
@@ -169,7 +169,7 @@ reviewer's exact environment were not exercised. The migration chain in
 The code does not contain login rate limiting, a CSP header, malware scanning,
 payment processing, or a diagnosis/medical-record workflow. The patient
 application-message lookup is also not scoped to the student's listing; see
-the privacy limitation in `SECURITY.md`. These should not be presented as
+the privacy limitation in `CYBERSECURITY.md`. These should not be presented as
 implemented features.
 
 ### Where are demo passwords?
@@ -181,5 +181,5 @@ must provide access through an approved channel. See [INSTALL](../INSTALL.md).
 ---
 
 [README](../README.md) · [INSTALL](../INSTALL.md) · [User guide](USER_GUIDE.md) ·
-[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](SECURITY.md) ·
+[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](CYBERSECURITY.md) ·
 [Reviewer guide](REVIEWER_GUIDE.md) · [Design](DESIGN.md)

@@ -13,7 +13,7 @@
 
 [README](README.md) · [INSTALL](INSTALL.md) · [User guide](docs/USER_GUIDE.md) ·
 [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE.md) ·
-[Security](docs/SECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
+[Security](docs/CYBERSECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
 [Design](docs/DESIGN.md)
 
 > [!NOTE]
@@ -58,7 +58,7 @@ time. These are separate workflows.
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Patient, student and administrator task walkthroughs. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Application layers, request flow and implementation modules. |
 | [docs/DATABASE.md](docs/DATABASE.md) | Tables, relationships, constraints and migration history. |
-| [docs/SECURITY.md](docs/SECURITY.md) | Implemented safeguards, access rules and limitations. |
+| [docs/CYBERSECURITY.md](docs/CYBERSECURITY.md) | Implemented safeguards, access rules and limitations. |
 | [docs/REVIEWER_GUIDE.md](docs/REVIEWER_GUIDE.md) | Presentation script, feature crosswalk and reviewer questions. |
 | [docs/DESIGN.md](docs/DESIGN.md) | Color, typography, motion and responsive behavior. |
 
@@ -77,5 +77,5 @@ Start with the [reviewer guide](docs/REVIEWER_GUIDE.md), then use the
 
 [README](README.md) · [INSTALL](INSTALL.md) · [User guide](docs/USER_GUIDE.md) ·
 [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE.md) ·
-[Security](docs/SECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
+[Security](docs/CYBERSECURITY.md) · [Reviewer guide](docs/REVIEWER_GUIDE.md) ·
 [Design](docs/DESIGN.md)

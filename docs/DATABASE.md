@@ -7,13 +7,13 @@
 </div>
 
 [README](../README.md) · [INSTALL](../INSTALL.md) · [User guide](USER_GUIDE.md) ·
-[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](SECURITY.md) ·
+[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](CYBERSECURITY.md) ·
 [Reviewer guide](REVIEWER_GUIDE.md) · [Design](DESIGN.md)
 
 > [!NOTE]
 > This file covers tables, columns, relationships and migration history.
 > It does not cover environment setup or authorization policy (see [INSTALL](../INSTALL.md)
-> and [Security](SECURITY.md)).
+> and [Security](CYBERSECURITY.md)).
 
 ## Entity relationship diagram
 
@@ -141,5 +141,5 @@ Each arrow is verified from `revision` and `down_revision` in
 ---
 
 [README](../README.md) · [INSTALL](../INSTALL.md) · [User guide](USER_GUIDE.md) ·
-[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](SECURITY.md) ·
+[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Security](CYBERSECURITY.md) ·
 [Reviewer guide](REVIEWER_GUIDE.md) · [Design](DESIGN.md)
