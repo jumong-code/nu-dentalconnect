@@ -1,5 +1,3 @@
-# Upload at pag-serve ng images. Bahagi ito ng profile at
-# listing CRUD, kaya may validation at safe file names.
 import os
 import secrets
 import uuid
@@ -21,8 +19,6 @@ MAX_LISTING_IMAGE_DIMENSION = 1600
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
-# Limit para sa decompression bomb. Sobrang laking image
-# na bubuntis ang memory, hindi papasukin.
 Image.MAX_IMAGE_PIXELS = 50_000_000
 
 
