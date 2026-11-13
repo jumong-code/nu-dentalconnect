@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Patient applications — NU DentalConnect{% endblock %}
+{# Lahat ng applications sa lahat ng listing ng student. #}
 {% block content %}
 <header class="page-head">
   <div>
@@ -13,11 +14,13 @@
   </div>
 </header>
 
+{# Kabuuang bilang ng applications, lahat ng pages. #}
 <div class="filter-bar__meta">
   <p class="mb-0"><strong>{{ applications.total }}</strong> {{ 'application' if applications.total == 1 else 'applications' }} across your listings</p>
 </div>
 
 <section class="stack mt-4 applications-index" aria-label="Applications">
+  {# Bawat application, may link sa listing at sa patient profile. #}
   {% for application in applications.items %}
   <article class="applicant">
     <div class="applicant__head">
@@ -58,6 +61,7 @@
   {% endfor %}
 </section>
 
+{# Pagination, dala yung page number lang. #}
 {% if applications.pages > 1 %}
 <nav class="pagination" aria-label="Application pages">
   <span class="pagination__pages">Page {{ applications.page }} of {{ applications.pages }}</span>

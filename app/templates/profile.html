@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}Your profile — NU DentalConnect{% endblock %}
+{# Profile page: summary, avatar, account info, at password. #}
 {% block content %}
 
 <div class="profile-settings">
@@ -12,6 +13,7 @@
   </div>
 </header>
 
+{# Summary ng account: avatar, role, at contact details. #}
 <section class="profile-overview" aria-label="Account summary">
   <div class="profile-overview__person">
     {% if current_user.role == 'patient' and current_user.patient_profile.avatar_image %}
@@ -45,10 +47,13 @@
         <div><dt>Phone</dt><dd>{{ current_user.phone }}</dd></div>
       {% endif %}
   </dl>
+  {# Avatar lang ang pwede sa patient at student. Admin, wala. #}
   {% if current_user.role in ['patient', 'student'] %}
     <div class="avatar-actions profile-overview__actions d-flex flex-wrap align-items-center gap-2">
       <form method="post" action="{{ url_for('main.upload_avatar') }}" enctype="multipart/form-data" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {# Mag-submit agad pag pumili ng file. Yung size at format, #}
+        {# sa server pa rin iche-check. #}
         <input type="file" name="avatar" id="avatar-input" accept="image/jpeg,image/png,image/webp" style="display:none" aria-label="Choose avatar image" onchange="this.form.submit()">
         <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('avatar-input').click()">{{ icon('user') }} Upload avatar</button>
         <span class="form-help d-block mt-1">Max 2 MB, 512×512 px. JPEG, PNG, WebP.</span>
@@ -95,6 +100,7 @@
             {% for error in form.phone.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
           </div>
 
+          {# Extra fields ng student. Patients, walang year level at campus. #}
           {% if current_user.role == 'student' %}
             <div class="form-grid form-grid--two">
               <div class="field">
@@ -130,6 +136,7 @@
     </article>
   </section>
 
+  {# Password form at reminder na scheduling data lang ang iiimbakin. #}
   <aside class="profile-settings__security">
     <article class="panel profile-settings__panel profile-settings__panel--security">
       <div class="panel__head profile-settings__panel-head">

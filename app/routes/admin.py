@@ -1,3 +1,5 @@
+# Admin blueprint. Accounts, student approvals, listings,
+# appointments, at audit history.
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -14,11 +16,13 @@ from ..time_utils import MANILA_TZ
 bp = Blueprint("admin", __name__)
 
 
+# Role guard. Admin lang ang makakapasok sa mga route dito.
 def admin_required():
     if current_user.role != "admin":
         abort(403)
 
 
+# Listahan ng accounts, may search at role filter.
 @bp.route("/users")
 @login_required
 def users():
@@ -36,6 +40,8 @@ def users():
     return render_template("admin/users.html", users=users_page)
 
 
+# Activate o deactivate. Yung sariling account, hindi
+# puwedeng i-deactivate.
 @bp.route("/users/<int:user_id>/toggle", methods=["POST"])
 @login_required
 def toggle_user(user_id):
@@ -45,17 +51,20 @@ def toggle_user(user_id):
         flash("You cannot deactivate your own administrator account.", "error")
         return redirect(url_for("admin.users"))
     user.is_active = not user.is_active
-    user.auth_version += 1  # Existing sessions stop resolving immediately.
+    # Tinaasan yung version para mawala agad yung session ng
+    # user sa lahat ng device.
+    user.auth_version += 1
     audit_logger.admin_user_toggle(actor=current_user, target_user=user, is_active=user.is_active)
     db.session.commit()
     flash("Account status updated.", "success")
     return redirect(url_for("admin.users"))
 
 
+# Admin ang mag-se-set ng password. Hindi ito para sa admin
+# accounts, kaya may check sa role.
 @bp.route("/users/<int:user_id>/set-password", methods=["GET", "POST"])
 @login_required
 def set_user_password(user_id):
-    """Admin sets a password for a non-admin user. Never used for administrators."""
     admin_required()
     user = db.get_or_404(User, user_id)
     if user.role == "admin":
@@ -66,10 +75,10 @@ def set_user_password(user_id):
     if form.validate_on_submit():
         device = get_device_info(request)
         user.set_password(form.password.data)
-        user.auth_version += 1  # Invalidate every existing session.
+        user.auth_version += 1
         audit_logger.password_admin_set(actor=current_user, target_user=user, device=device)
         db.session.commit()
-        # The email never contains the new password.
+        # Email, notification lang. Wala yung bagong password.
         send_email(
             user.email,
             "Your NU DentalConnect password was changed",
@@ -83,6 +92,7 @@ def set_user_password(user_id):
     return render_template("admin/set_password.html", form=form, target_user=user)
 
 
+# Approval queue. Verified, active, pending lang ang kasama.
 @bp.route("/students/pending")
 @login_required
 def pending_students():
@@ -97,6 +107,8 @@ def pending_students():
     return render_template("admin/pending_students.html", students=students_page)
 
 
+# Approve. Value error galing sa service, kaya friendly
+# flash message lang.
 @bp.route("/students/<int:user_id>/approve", methods=["POST"])
 @login_required
 def approve_student(user_id):
@@ -111,6 +123,7 @@ def approve_student(user_id):
     return redirect(url_for("admin.pending_students"))
 
 
+# Reject = deactivate. Hindi binubura yung account.
 @bp.route("/students/<int:user_id>/reject", methods=["POST"])
 @login_required
 def reject_student(user_id):
@@ -125,6 +138,7 @@ def reject_student(user_id):
     return redirect(url_for("admin.pending_students"))
 
 
+# Lahat ng listings, kasama drafts at closed.
 @bp.route("/listings")
 @login_required
 def listings():
@@ -137,6 +151,7 @@ def listings():
     return render_template("admin/listings.html", listings=listings_page)
 
 
+# Admin puwedeng magsara ng listing mula rito.
 @bp.route("/listings/<int:listing_id>/close", methods=["POST"])
 @login_required
 def close_listing(listing_id):
@@ -149,6 +164,7 @@ def close_listing(listing_id):
     return redirect(url_for("admin.listings"))
 
 
+# Lahat ng appointments, newest first.
 @bp.route("/appointments")
 @login_required
 def appointments():
@@ -163,14 +179,10 @@ def appointments():
     return render_template("admin/appointments.html", appointments=appointments_page)
 
 
+# Audit history na may action, actor, at date range filter.
 @bp.route("/audit")
 @login_required
 def audit():
-    """Audit history with action, actor and date-range filters.
-
-    Sorting is always ``created_at DESC, id DESC`` so two events in the same
-    second keep a stable, newest-first order.
-    """
     admin_required()
     action = request.args.get("action", "").strip()[:80]
     actor = request.args.get("actor", "").strip()[:255]
@@ -183,12 +195,16 @@ def audit():
     if actor:
         query = query.filter(AuditLog.actor_email.ilike(f"%{actor}%"))
     try:
+        # Manila date galing sa form, iko-convert sa UTC bago
+        # ihambing sa created_at.
         if date_from:
             start = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=MANILA_TZ).astimezone(timezone.utc).replace(tzinfo=None)
             query = query.filter(AuditLog.created_at >= start)
+        # Plus one day para kasama pa yung buong araw na pinili.
         if date_to:
             end = (datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)).replace(tzinfo=MANILA_TZ).astimezone(timezone.utc).replace(tzinfo=None)
             query = query.filter(AuditLog.created_at < end)
+    # Mali yung date format. Flash lang, hindi crash.
     except ValueError:
         flash("Use a valid date in the date filters.", "error")
 
@@ -201,10 +217,11 @@ def audit():
     return render_template("admin/audit.html", logs=logs, actions=actions)
 
 
+# Hard delete ng account. Kailangang i-type yung email para
+# sigurado, at may check sa huling active admin.
 @bp.route("/users/<int:user_id>/delete", methods=["POST"])
 @login_required
 def delete_user(user_id):
-    """Hard delete a user account. Requires the typed email as confirmation."""
     admin_required()
     user = db.get_or_404(User, user_id)
 
@@ -212,6 +229,8 @@ def delete_user(user_id):
         flash("You cannot delete your own administrator account.", "error")
         return redirect(url_for("admin.users"))
 
+    # Bawal mawala yung huling admin, kasi walang makakapasok
+    # para mag-approve ng ibang accounts.
     if user.role == "admin":
         active_admin_count = db.session.scalar(
             db.select(db.func.count(User.id)).where(User.role == "admin", User.is_active.is_(True))
@@ -220,6 +239,8 @@ def delete_user(user_id):
             flash("Cannot delete the last active administrator.", "error")
             return redirect(url_for("admin.users"))
 
+    # May confirmed future appointment pa, hindi muna puwedeng
+    # burahin yung user.
     profile = user.patient_profile if user.role == "patient" else user.student_profile
     if profile is not None:
         future_confirmed = db.session.scalar(
@@ -233,6 +254,7 @@ def delete_user(user_id):
             flash(f"Cannot delete: user has {future_confirmed} confirmed future appointment(s). Cancel them first.", "error")
             return redirect(url_for("admin.users"))
 
+    # Typed email ang confirmation. Pag hindi tugma, cancel.
     confirm_email = request.form.get("confirm_email", "").strip()
     if len(confirm_email) > 255 or confirm_email.lower() != user.email:
         flash("Email confirmation does not match. Deletion cancelled.", "error")
@@ -255,10 +277,11 @@ def delete_user(user_id):
     return redirect(url_for("admin.users"))
 
 
+# Bura ng listing. May confirmation din kung may future
+# confirmed appointments.
 @bp.route("/listings/<int:listing_id>/delete", methods=["POST"])
 @login_required
 def delete_listing(listing_id):
-    """Hard delete a listing, confirming first when future appointments exist."""
     admin_required()
     listing = db.get_or_404(RecruitmentListing, listing_id)
 
@@ -340,10 +363,11 @@ def delete_listing(listing_id):
     return redirect(url_for("admin.listings"))
 
 
+# Bura ng appointment record, tapos notify yung dalawang
+# panig.
 @bp.route("/appointments/<int:appointment_id>/delete", methods=["POST"])
 @login_required
 def delete_appointment(appointment_id):
-    """Hard delete an appointment and notify both parties."""
     admin_required()
     appointment = db.get_or_404(Appointment, appointment_id)
     title = appointment.listing.title if appointment.listing else "a listing"

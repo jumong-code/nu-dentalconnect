@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Platform overview — NU DentalConnect{% endblock %}
+{# Admin overview: live counts ng accounts at activity. #}
 {% block content %}
 
 <header class="page-head">
@@ -16,6 +17,7 @@
   </div>
 </header>
 
+{# data-target at data-count-up ang ginagamit ng animation sa app.js. #}
 <div class="stat-grid">
   <article class="stat fade-up">
     <p class="stat__label">Accounts</p>
@@ -45,6 +47,7 @@
   </article>
 </div>
 
+{# Ledger: bawat area ng platform, bilang at link. #}
 <article class="panel">
   <div class="panel__head">
     <div>
@@ -92,6 +95,7 @@
   </ul>
 </article>
 
+{# Paalala na counts lang ito at walang medical records na iniimbak. #}
 <div class="notice mt-4">
   {{ icon('info') }}
   <p>Counts refresh on every page load. The platform stores scheduling and account data only; it does not hold diagnoses or medical records.</p>

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Verify email — NU DentalConnect{% endblock %}
+{# OTP verification page. Isang code lang, may expiry. #}
 {% block content %}
 <section class="auth-shell">
   <div class="auth-main auth-main--center">
@@ -8,6 +9,7 @@
         <h1>Verify your email</h1>
         <p>Enter the six-digit code sent to your address. It expires in 10 minutes and works once.</p>
       </div>
+      {# Form ng code. Naka-prefill yung email galing sa query string. #}
       <form method="post" action="{{ url_for('auth.verify_email') }}">
         {{ form.hidden_tag() }}
         <div class="field">
@@ -22,6 +24,7 @@
         </div>
         <button class="btn btn-primary btn-block" type="submit">Verify email</button>
       </form>
+      {# Resend button. Hidden yung email para hindi i-type ulit. #}
       <form method="post" action="{{ url_for('auth.resend_verification') }}" class="mt-3">
         {{ resend_form.hidden_tag() }}
         {{ resend_form.email(type='hidden', value=form.email.data or '') }}

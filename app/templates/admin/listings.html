@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Appointment listings — NU DentalConnect{% endblock %}
+{# Lahat ng listings, kasama drafts at closed. #}
 {% block content %}
 
 <header class="page-head">
@@ -45,12 +46,14 @@
             <td class="cell-date">{{ l.created_at|local_datetime('%b %d, %Y') }}</td>
             <td>{{ status_pill(l.status) }}</td>
             <td class="cell-actions">
+              {# Closed na listing, wala nang Close button. #}
               {% if l.status != 'closed' %}
                 <form method="post" action="{{ url_for('admin.close_listing', listing_id=l.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-sm btn-outline" type="submit">Close listing</button>
                 </form>
               {% endif %}
+              {# Delete form. May checkbox kung may confirmed appointment. #}
               <form method="post" action="{{ url_for('admin.delete_listing', listing_id=l.id) }}" onsubmit="return confirm('Permanently delete this listing?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 {% if l.status != 'closed' %}<label class="small"><input type="checkbox" name="confirm" value="true"> Cancel future confirmed appointments</label>{% endif %}

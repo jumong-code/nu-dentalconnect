@@ -1,3 +1,5 @@
+{# Base template. Yung header at sidebar, depende kung naka-login. #}
+{# Dito rin naka-load yung CSS at JS para isang lugar lang. #}
 {% from '_macros.html' import icon %}
 <!doctype html>
 <html lang="en">
@@ -11,6 +13,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {# Bootstrap CSS dito lang naka-load, para sa pages na gumagamit #}
+  {# ng grid at table classes. Hindi ko na nilagay sa lahat. #}
   {% if request.endpoint in ['student.applications', 'student.listing_applications', 'student.appointments', 'main.profile'] or (request.endpoint == 'main.dashboard' and current_user.is_authenticated and current_user.role == 'student') %}
   <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
   {% endif %}
@@ -20,8 +24,10 @@
 <body class="{% if current_user.is_authenticated %}is-workspace{% else %}is-public{% endif %}">
 <a class="skip-link" href="#main">Skip to content</a>
 
+{# Dalawang layout: workspace pag naka-login, public page pag hindi. #}
 {% if current_user.is_authenticated %}
   {% set role = current_user.role %}
+  {# Role branch para sa label ng workspace sa sidebar at topbar. #}
   {% if role == 'admin' %}
     {% set workspace_name = 'Administration' %}
     {% set workspace_kicker = 'Operations' %}
@@ -51,11 +57,13 @@
         <span class="nav-toggle__bars" aria-hidden="true"><i></i><i></i><i></i></span>
       </button>
 
+      {# Menu ng workspace. Iba-iba yung links depende sa role. #}
       <nav class="rail-nav" id="navigation" aria-label="Workspace navigation">
         <p class="rail-nav__label">Workspace</p>
         {% if role == 'patient' %}
           <a href="{{ url_for('main.opportunities') }}" {% if request.endpoint in ['main.opportunities', 'main.opportunity_detail'] %}aria-current="page"{% endif %}>{{ icon('search') }}<span>Find appointments</span></a>
           <a href="{{ url_for('main.dashboard') }}" {% if request.endpoint == 'main.dashboard' %}aria-current="page"{% endif %}>{{ icon('calendar') }}<span>My appointments</span></a>
+        {# Student links: dashboard, appointments, applications, listing. #}
         {% elif role == 'student' %}
           <a href="{{ url_for('main.dashboard') }}" {% if request.endpoint == 'main.dashboard' %}aria-current="page"{% endif %}>{{ icon('grid') }}<span>Dashboard</span></a>
           <a href="{{ url_for('student.appointments') }}" {% if request.endpoint in ['student.appointments', 'student.delete_appointment'] %}aria-current="page"{% endif %}>{{ icon('calendar') }}<span>Appointments</span></a>
@@ -71,6 +79,8 @@
           <a href="{{ url_for('admin.audit') }}" {% if request.endpoint == 'admin.audit' %}aria-current="page"{% endif %}>{{ icon('shield') }}<span>Audit history</span></a>
         {% endif %}
 
+        {# Account links at sign out. POST lang yung logout, may CSRF #}
+        {# token, kaya hindi ito mat-trigger ng simpleng link. #}
         <p class="rail-nav__label">Account</p>
         <a href="{{ url_for('main.profile') }}" {% if request.endpoint == 'main.profile' %}aria-current="page"{% endif %}>{{ icon('user') }}<span>My account</span></a>
         <a href="{{ url_for('main.about') }}" {% if request.endpoint == 'main.about' %}aria-current="page"{% endif %}>{{ icon('info') }}<span>About the project</span></a>
@@ -100,6 +110,7 @@
 
       <main class="workspace-main" id="main">
         <div class="workspace-content">
+        {# Flash messages ng Flask. Yung category, ginagawang alert tone. #}
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <div class="flash-stack" role="status" aria-live="polite">
@@ -115,6 +126,7 @@
           {% endif %}
         {% endwith %}
 {% else %}
+  {# Public header para sa bisita at sa hindi pa naka-login. #}
   <header class="public-header">
     <a class="brand" href="{{ url_for('main.index') }}" aria-label="NU DentalConnect home">
       <img class="brand__seal" src="{{ url_for('static', filename='images/nu-logo.svg') }}" alt="" aria-hidden="true">
@@ -150,12 +162,12 @@
   <main id="main">
 {% endif %}
 
+{# Dito ipinapasok ng child template yung content ng page. #}
 {% block content %}{% endblock %}
 
 {% if current_user.is_authenticated %}
         </div>
         <footer class="workspace-footer">
-          <span>NU DentalConnect &middot; {{ authorization_notice }}</span>
           <a href="{{ url_for('main.about') }}">About and project credits</a>
         </footer>
       </main>
@@ -163,6 +175,7 @@
   </div>
 {% else %}
   </main>
+  {# Public footer na may links at copyright year. #}
   <footer class="site-footer">
     <a class="brand" href="{{ url_for('main.index') }}" aria-label="NU DentalConnect home">
       <img class="brand__seal" src="{{ url_for('static', filename='images/nu-logo.svg') }}" alt="" aria-hidden="true">
@@ -178,6 +191,7 @@
   </footer>
 {% endif %}
 
+{# Isang JS file lang, defer para hindi humarang sa page load. #}
 <script src="{{ url_for('static', filename='js/app.js', v='atrium-20261111') }}" defer></script>
 {% block scripts %}{% endblock %}
 </body>

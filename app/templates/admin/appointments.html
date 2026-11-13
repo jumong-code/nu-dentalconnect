@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Appointments — NU DentalConnect{% endblock %}
+{# Lahat ng appointments, newest first. #}
 {% block content %}
 
 <header class="page-head">
@@ -36,6 +37,7 @@
         <tbody>
           {% for a in appointments.items %}
           <tr>
+            {# Oras at proposed time kung meron. UTC sa DB, Manila sa display. #}
             <td class="cell-date">
               {{ a.starts_at|local_datetime('%b %d, %Y · %I:%M %p') }}
               {% if a.proposed_at %}<span class="cell-meta">Proposed: {{ a.proposed_at|local_datetime('%b %d · %I:%M %p') }}</span>{% endif %}
@@ -51,6 +53,7 @@
             </td>
             <td>{{ status_pill(a.status) }}</td>
             <td class="cell-actions">
+              {# Delete ng record. Yung route ang nag-notify sa dalawang panig. #}
               <form method="post" action="{{ url_for('admin.delete_appointment', appointment_id=a.id) }}" onsubmit="return confirm('Permanently delete this appointment record?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm btn-danger" type="submit">Delete</button>

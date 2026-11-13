@@ -1,8 +1,8 @@
-{# Shared presentation macros. Icons are inline SVG so they inherit currentColor
-   and need no extra request. #}
-
+{# Inline SVG icons, kaya walang extra request at sumusunod sa #}
+{# color ng text. #}
 {% macro icon(name, size=18) -%}
 <svg class="icon" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{# Isa-isa yung path ng icon. Pag wala sa listahan, walang laman. #}
 {%- if name == 'grid' -%}
   <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
 {%- elif name == 'calendar' -%}
@@ -75,8 +75,8 @@
 </svg>
 {%- endmacro %}
 
-{# Reusable password field with an accessible show/hide control.
-   type="button" keeps it out of form submission; aria-pressed communicates state. #}
+{# Password field na may show/hide button. type=button para hindi #}
+{# ito mag-submit ng form. #}
 {% macro password_field(field, field_id, autocomplete='current-password') -%}
 <div class="password-field">
   {{ field(class='form-control' + (' is-invalid' if field.errors else ''), autocomplete=autocomplete, id=field_id, **{'aria-invalid': 'true' if field.errors else 'false'}) }}
@@ -84,10 +84,12 @@
     <svg class="password-toggle__icon password-toggle__icon--hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
     <svg class="password-toggle__icon password-toggle__icon--show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
   </button>
+  {# Server-side errors ng field, isang span kada error. #}
   {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
 </div>
 {%- endmacro %}
 
+{# Kulay ng status pill, naka-map sa status values ng model. #}
 {% macro status_pill(status, label=None) -%}
 {%- set tones = {
   'published': 'success', 'accepted': 'success', 'confirmed': 'success', 'active': 'success',
@@ -99,6 +101,7 @@
 <span class="status status--{{ tones.get(status, 'neutral') }}">{{ (label or status|replace('_', ' ')|title) }}</span>
 {%- endmacro %}
 
+{# Reusable empty state, may optional na dalawang button. #}
 {% macro empty_state(title, copy, icon_name='calendar', primary_url=None, primary_label=None, secondary_url=None, secondary_label=None) -%}
 <div class="empty-state">
   <span class="empty-state__icon">{{ icon(icon_name, 21) }}</span>

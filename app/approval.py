@@ -1,45 +1,43 @@
-"""Student approval lifecycle.
-
-A verified student account stays locked until an administrator approves it.
-Keeping the rule in one service means routes cannot forget the audit row,
-the in-app notification, or the "patients are never gated" rule.
-"""
+# Flow ng student approval sa isang lugar lang. Kung nasa
+# routes, nakakalimutan yung audit, notify, at email.
 from .audit import audit_logger
 from .extensions import db
 from .models import User
 from .services import notify, send_email
 
 
+# Pag verified na yung email, pending pa rin hanggang
+# i-approve ng admin. Patients at admin, hindi naka-gate.
 class StudentApprovalService:
-    """Single home for the pending-student workflow."""
 
     PENDING = "pending"
     APPROVED = "approved"
     VALID_STATUSES = {PENDING, APPROVED}
 
+    # Tinatawag sa registration, bago pa ma-verify yung OTP.
     @classmethod
     def mark_pending(cls, student):
-        """Called at student registration, before the OTP is verified."""
         if student.role != "student":
             return
         student.require_admin_approval()
         db.session.add(student)
 
+    # Notify admins kapag na-verify na yung email at pending pa.
     @classmethod
     def email_verified(cls, student):
-        """Notify admins only once a student has completed email verification."""
         if student.role == "student" and student.approval_status == cls.PENDING:
             cls._notify_admins(student)
 
+    # Lahat ng active admin mabibigyan ng in-app notification.
     @classmethod
     def _notify_admins(cls, student):
-        """In-app notification for every active administrator."""
         admins = db.session.scalars(
             db.select(User).where(User.role == "admin", User.is_active.is_(True))
         ).all()
         for admin in admins:
             notify(admin, f"New student awaiting approval: {student.full_name}.")
 
+    # Query para sa approval queue: verified, active, pending.
     @classmethod
     def pending_students(cls):
         return db.select(User).where(
@@ -49,9 +47,10 @@ class StudentApprovalService:
             User.is_active.is_(True),
         )
 
+    # Student lang na pending at verified ang puwedeng i-approve.
+    # May ValueError kaya hindi basta nababago yung status.
     @classmethod
     def approve(cls, student, admin):
-        """Approve a pending student and tell them by in-app notice and email."""
         if student.role != "student" or student.approval_status != cls.PENDING or not student.email_verified:
             raise ValueError("That account is not a pending student.")
         student.approve()
@@ -66,9 +65,9 @@ class StudentApprovalService:
             message="Your student account has been approved. You can now sign in and publish appointment listings.",
         )
 
+    # Reject = deactivate, hindi delete, para may record pa rin.
     @classmethod
     def reject(cls, student, admin):
-        """Deactivate a pending student without deleting their record."""
         if student.role != "student" or student.approval_status != cls.PENDING:
             raise ValueError("That account is not a pending student.")
         student.deactivate()

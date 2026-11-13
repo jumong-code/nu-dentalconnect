@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}Audit history — NU DentalConnect{% endblock %}
+{# Audit history: action, actor, at date range filters. #}
 {% block content %}
 <header class="page-head">
   <div>
@@ -10,6 +11,7 @@
   </div>
 </header>
 
+{# Pili ng action at actor, tapos date range. GET lahat. #}
 <form class="filter-bar" method="get" role="search">
   <div>
     <label class="visually-hidden" for="action">Filter by action</label>
@@ -35,6 +37,7 @@
   <button class="btn btn-primary" type="submit">{{ icon('search') }} Filter</button>
 </form>
 
+{# Meta lang kung may filter na naka-set. #}
 {% if request.args.get('action') or request.args.get('actor') or request.args.get('date_from') or request.args.get('date_to') %}
 <div class="filter-bar__meta">
   <p class="mb-0"><strong>{{ logs.total }}</strong> {{ 'event' if logs.total == 1 else 'events' }} matching your filters</p>
@@ -44,6 +47,7 @@
 
 <article class="panel">
   <div class="panel__head"><div><h2>Events</h2><p>Newest first. A local test may show 127.0.0.1 because the browser connects directly to this computer. “Remember” records whether the sign-in asked to keep a session.</p></div></div>
+  {# Bawat event: kailan, sino, ano, at device na naka-hash. #}
   {% if logs.items %}
   <div class="table-wrap">
     <table class="data-table data-table--stack">
@@ -56,6 +60,7 @@
           <td data-label="Actor">{{ event.actor_email }}</td>
           <td data-label="Action"><span class="status status--info">{{ event.action|replace('_', ' ')|title }}</span></td>
           <td data-label="Record">{{ event.entity_type|title }}{% if event.entity_id %} #{{ event.entity_id }}{% endif %}</td>
+          {# Kung walang device info, mas madaling basahin yung label. #}
           <td data-label="Device">{{ event.details.get('device', {}).get('label', '—')|replace('unknown / unknown / unknown', 'Not reported by browser') }}</td>
           <td data-label="Source IP">{{ event.ip_address or 'Not available' }}</td>
           <td data-label="Details">{% if event.details %}{% for key, value in event.details.items() if key != 'device' %}<span class="small">{{ key|replace('_', ' ')|title }}: {{ value }}</span>{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}<span class="muted">—</span>{% endif %}</td>

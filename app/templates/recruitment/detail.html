@@ -2,10 +2,13 @@
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}{{ listing.title }} — NU DentalConnect{% endblock %}
 {% block description %}{{ listing.description|truncate(150) }}{% endblock %}
+{# Detail page: description, eligibility, at apply panel. #}
 {% block content %}
 
 <div class="page-band">
   <div class="container">
+    {# Bumalik sa directory. Yung student name, link sa profile #}
+    {# kung patient o admin yung tumitingin. #}
     <a class="back-link" href="{{ url_for('main.opportunities') }}">{{ icon('arrow-left', 15) }} All appointment listings</a>
     <header class="page-head">
       <div>
@@ -20,6 +23,7 @@
   </div>
 </div>
 
+{# Cover kung meron. Inline style lang, isang beses lang gamit. #}
 {% if listing.cover_image %}
 <section class="section section--tint">
   <div class="container">
@@ -31,6 +35,8 @@
 <section class="section section--tint">
   <div class="container detail-layout">
     <article class="detail-main">
+      {# Owner at admin lang ang nakakakita ng hindi published, kaya may #}
+      {# warning na ito. #}
       {% if listing.status != 'published' %}
         <div class="notice notice--warning mb-4">
           {{ icon('alert') }}
@@ -71,6 +77,7 @@
       {% endif %}
     </article>
 
+    {# Apply panel. Depende sa role kung anong button ang lalabas. #}
     <aside class="apply-panel" aria-labelledby="apply-title">
       <h2 id="apply-title">Request an appointment</h2>
       <p>Choose one date and time to send your request. The appointment is not booked until the student confirms it.</p>
@@ -80,9 +87,11 @@
         <p><span class="notice__title">A request is not a booking.</span>The student can confirm your time or propose another one.</p>
       </div>
 
+      {# Patient: pumili ng oras, o mag-apply na walang oras. #}
       {% if current_user.is_authenticated and current_user.role == 'patient' %}
         <a class="btn btn-primary btn-block" href="{{ url_for('patient.request_appointment', listing_id=listing.id) }}">{{ icon('calendar') }} Choose a date and time</a>
 
+        {# May application na siya dito, kaya status na lang ang ipakita. #}
         {% if application_status %}
         <div class="application-confirmation mt-4" role="status">
           {{ icon('check-circle', 18) }}

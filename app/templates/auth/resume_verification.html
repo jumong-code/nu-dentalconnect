@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Resume verification — NU DentalConnect{% endblock %}
+{# Page para humingi ulit ng verification code. #}
 {% block content %}
 <section class="auth-shell">
   <div class="auth-main auth-main--center">
@@ -8,6 +9,7 @@
         <h1>Resume email verification</h1>
         <p>Enter the email address for your unverified account. If it exists and is unverified, we'll send a new code.</p>
       </div>
+      {# Generic ang sagot sa route, hindi sinasabi kung existing. #}
       <form method="post" action="{{ url_for('auth.resume_verification') }}">
         {{ form.hidden_tag() }}
         <div class="field">

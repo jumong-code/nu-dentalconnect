@@ -1,7 +1,9 @@
+{# Card ng listing. Ginagamit sa home page at sa browse page. #}
 {% from '_macros.html' import icon, status_pill %}
 <article class="listing-card">
   <div class="listing-card__image">
     <a href="{{ url_for('main.opportunity_detail', listing_id=listing.id) }}">
+      {# Cover kung meron, kundi placeholder icon. lazy load ito. #}
       {% if listing.cover_image %}
       <img src="{{ url_for('main.serve_cover', filename=listing.cover_image) }}" alt="Cover image for {{ listing.title }}" loading="lazy">
       {% else %}
@@ -13,6 +15,7 @@
     <span class="chip">{{ listing.category }}</span>
     <span class="listing-card__date">{{ listing.created_at|local_datetime('%b %d, %Y') }}</span>
   </div>
+  {# Pag may application na yung patient sa listing na ito, may badge. #}
   {% if applied_statuses is defined and listing.id in applied_statuses %}
     <div class="listing-card__application-state" aria-label="You have already applied to this listing">
       {{ icon('check-circle', 16) }}
@@ -26,6 +29,7 @@
     <li>{{ icon('map-pin', 16) }}<span><b>Location</b><br>{{ listing.location }}</span></li>
     <li>{{ icon('clock', 16) }}<span><b>Preferred times</b><br>{{ listing.preferred_schedule }}</span></li>
   </ul>
+  {# Pangalan ng student at link papunta sa detail page. #}
   <div class="listing-card__foot">
     <span class="student-tag">
       <span class="avatar avatar--sm" aria-hidden="true">{{ listing.student.user.full_name[:1]|upper }}</span>

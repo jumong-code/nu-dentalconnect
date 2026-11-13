@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}Account pending approval — NU DentalConnect{% endblock %}
+{# Para sa student na verified na pero hindi pa approved. #}
 {% block content %}
 <section class="auth-shell">
   <div class="auth-main auth-main--center">
@@ -19,6 +20,7 @@
         <p class="status-detail">You will receive an email notification once your account is approved.</p>
       </div>
 
+      {# Details ng registration para may mare-review yung admin. #}
       {% if user %}
       <div class="auth-info">
         <h3>Registration details</h3>

@@ -1,40 +1,25 @@
-"""
-Name and field formatters for NU DentalConnect.
-
-Provides consistent server-side normalization and client-side formatting
-for year level, campus, and other fields without corrupting ordinals or acronyms.
-"""
+# Formatting ng year level, campus, at name. Nahirapan ako
+# sa str.title() dati, kaya may sariling rules dito.
 import re
 from typing import Optional
 
 
+# Bakit walang str.title(): nagiging 4Th Year at Nu yung
+# output. Kaya explicit patterns na lang ginamit ko.
 class FieldFormatter:
-    """
-    Handles formatting of structured fields like year level and campus.
 
-    Key design decisions:
-    - NEVER uses str.title() - it corrupts "4th Year" -> "4Th Year" and "NU" -> "Nu"
-    - Uses explicit patterns for known formats
-    - Preserves user intent for free-text fields
-    - Provides both server-side (authoritative) and client-side (progressive enhancement) formatting
-    """
-
-    # Known year level patterns and their canonical forms
+    # Mga pattern ng year level at yung kapalit na text.
     YEAR_LEVEL_PATTERNS = [
-        # "Year 1" -> "Year 1"
         (re.compile(r"(?i)^year\s*([1-5])$"), lambda m: f"Year {m.group(1)}"),
-        # "1st year", "2nd year", etc. -> "Year 1", "Year 2"
         (re.compile(r"(?i)^([1-5])(?:st|nd|rd|th)\s*year$"), lambda m: f"Year {m.group(1)}"),
-        # "1", "2", etc. -> "Year 1", "Year 2"
         (re.compile(r"^([1-5])$"), lambda m: f"Year {m.group(1)}"),
-        # "intern" -> "Intern"
         (re.compile(r"(?i)^intern$"), lambda m: "Intern"),
     ]
 
-    # Known campus acronyms that must stay uppercase
+    # Mga acronym na dapat manatiling uppercase.
     CAMPUS_ACRONYMS = {"NU", "U", "PH", "USA", "UK", "EU", "WHO", "ADA", "FDI"}
 
-    # Campus name corrections (common misspellings/abbreviations)
+    # Madalas na mali sa campus name, may tamang version na.
     CAMPUS_CORRECTIONS = {
         "national university": "National University",
         "manila": "Manila",
@@ -44,22 +29,10 @@ class FieldFormatter:
         "davao": "Davao",
     }
 
+    # Subukan isa-isa yung pattern. Pag walang tugma, ibabalik ko
+    # yung input pero nilinis lang yung extra spaces.
     @classmethod
     def format_year_level(cls, value: Optional[str]) -> Optional[str]:
-        """
-        Normalize year level input to canonical form.
-
-        Examples:
-        - "year 3" -> "Year 3"
-        - "3rd year" -> "Year 3"
-        - "4th Year" -> "Year 4" (NOT "4Th Year")
-        - "intern" -> "Intern"
-        - "Year 5" -> "Year 5"
-        - "  year 2  " -> "Year 2"
-
-        Returns None if input is empty/None.
-        Returns original value if no pattern matches (preserves user input).
-        """
         if not value:
             return None
 
@@ -67,33 +40,17 @@ class FieldFormatter:
         if not cleaned:
             return None
 
-        # Try each pattern
+        # 3rd year, Year 3, at 3, lahat nagiging Year 3.
         for pattern, formatter in cls.YEAR_LEVEL_PATTERNS:
             match = pattern.match(cleaned)
             if match:
                 return formatter(match)
 
-        # No pattern matched - return cleaned but don't force title case
-        # Just normalize whitespace
         return re.sub(r"\s+", " ", cleaned)
 
+    # Acronyms stay uppercase, tapos title case yung ibang words.
     @classmethod
     def format_campus(cls, value: Optional[str]) -> Optional[str]:
-        """
-        Normalize campus name with proper casing.
-
-        Rules:
-        - Known acronyms (NU, WHO, ADA, etc.) stay UPPERCASE
-        - Known campus names get proper title case
-        - Other words: first letter capitalized, rest lowercase
-        - Preserves hyphens, slashes, parentheses
-
-        Examples:
-        - "nu" -> "NU"
-        - "national university" -> "National University"
-        - "nu manila" -> "NU Manila"
-        - "manila campus" -> "Manila Campus"
-        """
         if not value:
             return None
 
@@ -101,13 +58,13 @@ class FieldFormatter:
         if not cleaned:
             return None
 
-        # Check for known corrections first (case-insensitive)
         lower = cleaned.lower()
         if lower in cls.CAMPUS_CORRECTIONS:
             return cls.CAMPUS_CORRECTIONS[lower]
 
-        # Split by spaces and process each word
-        words = re.split(r"(\s+)", cleaned)  # Keep whitespace
+        # Hinahati ko sa spaces pero kinikeep yung whitespace para
+        # hindi magdikit yung words.
+        words = re.split(r"(\s+)", cleaned)
         result = []
 
         for word in words:
@@ -119,25 +76,16 @@ class FieldFormatter:
             if upper_word in cls.CAMPUS_ACRONYMS:
                 result.append(upper_word)
             elif word[0].isalpha():
-                # Capitalize first letter, lowercase rest
                 result.append(word[0].upper() + word[1:].lower())
             else:
                 result.append(word)
 
         return "".join(result)
 
+    # Unang letter lang ang pinapalaki. Yung O'Connor at McDonald
+    # hindi masisira, kasi hindi ko ginamit yung title case.
     @classmethod
     def format_full_name(cls, value: Optional[str]) -> Optional[str]:
-        """
-        Format full name with proper casing.
-
-        Does NOT use str.title() because it breaks:
-        - "O'Connor" -> "O'connor" (wrong)
-        - "McDonald" -> "Mcdonald" (wrong)
-        - "van der Waals" -> "Van Der Waals" (wrong)
-
-        Instead, capitalizes each word's first letter, preserves internal caps.
-        """
         if not value:
             return None
 
@@ -145,20 +93,19 @@ class FieldFormatter:
         if not cleaned:
             return None
 
-        # Split on spaces, capitalize each word's first character
         words = cleaned.split()
         formatted = []
         for word in words:
             if len(word) == 1:
                 formatted.append(word.upper())
             else:
-                # Capitalize first letter, preserve rest
                 formatted.append(word[0].upper() + word[1:])
 
         return " ".join(formatted)
 
 
-# Client-side formatter (mirrored in app.js for progressive enhancement)
+# String ng JS code na mirror ng logic dito. Reference ko
+# ito para sa app.js, hindi ito tinatawag sa Python.
 CLIENT_FORMATTER_CODE = """
 // Year Level formatter - mirrors server-side FieldFormatter.format_year_level
 function formatYearLevel(value) {

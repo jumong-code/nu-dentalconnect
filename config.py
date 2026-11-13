@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# class para sa config (OOP).
 class Config:
     APP_ENV = os.getenv("APP_ENV", "development").lower()
     SECRET_KEY = os.getenv("SECRET_KEY") or (secrets.token_hex(32) if APP_ENV != "production" else None)
@@ -20,7 +21,9 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
     WTF_CSRF_TIME_LIMIT = 3600
     WTF_CSRF_SSL_STRICT = APP_ENV == "production"
-    MAX_CONTENT_LENGTH = 5_242_880  # 5 MB (allows 4 MB file + form overhead)
+    # Limit sa upload size. 5 MB para kasya yung 4 MB image
+    # plus yung form data.
+    MAX_CONTENT_LENGTH = 5_242_880
     MAIL_SERVER = os.getenv("MAIL_SERVER")
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
@@ -29,12 +32,6 @@ class Config:
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "NU DentalConnect <noreply@example.com>")
     APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000")
-    # Single source of truth for campus authorization wording. The authorizing
-    # office is intentionally a placeholder until the client supplies it.
-    AUTHORIZATION_NOTICE = os.getenv(
-        "AUTHORIZATION_NOTICE",
-        "[INSERT AUTHORIZING OFFICE] has authorized this project for campus use.",
-    )
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 280}
 
     @classmethod

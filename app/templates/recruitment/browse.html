@@ -2,6 +2,7 @@
 {% from '_macros.html' import icon %}
 {% block title %}Browse appointments — NU DentalConnect{% endblock %}
 {% block description %}Browse open dental procedure listings from National University dentistry students and request an appointment time.{% endblock %}
+{# Browse page: directory ng published listings. #}
 {% block content %}
 
 <div class="page-band">
@@ -23,6 +24,7 @@
 
 <section class="section section--tint">
   <div class="container">
+    {# GET form ito, kaya nasa URL yung filter at maibabahagi. #}
     <form class="filter-bar" method="get" role="search">
       <div>
         <label class="visually-hidden" for="q">Search procedure listings</label>
@@ -44,6 +46,7 @@
       <button class="btn btn-primary">{{ icon('search') }} Search listings</button>
     </form>
 
+    {# Bilang ng results, may Clear filters kung may naka-set. #}
     <div class="filter-bar__meta">
       <p class="mb-0">
         <strong>{{ listings.total }}</strong> open {{ 'procedure' if listings.total == 1 else 'procedures' }}{% if request.args.get('q') or request.args.get('category') or request.args.get('availability') %} matching your filters{% endif %}
@@ -53,11 +56,13 @@
       {% endif %}
     </div>
 
+    {# Bawat card, nasa _card.html para isang lugar lang yung markup. #}
     {% if listings.items %}
       <div class="listing-grid mt-5">
         {% for listing in listings.items %}{% include 'recruitment/_card.html' %}{% endfor %}
       </div>
 
+      {# Pagination. Dala-dala yung filters para hindi mawala. #}
       {% if listings.pages > 1 %}
       <nav class="pagination" aria-label="Appointment listing pages">
         <span class="pagination__pages">Page {{ listings.page }} of {{ listings.pages }}</span>

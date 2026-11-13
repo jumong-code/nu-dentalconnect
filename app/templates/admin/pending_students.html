@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Pending Students — NU DentalConnect{% endblock %}
+{# Approval queue. Verified na yung email, hinihintay lang admin. #}
 {% block content %}
 
 <header class="page-head">
@@ -15,6 +16,7 @@
 </header>
 
 <article class="panel mt-4">
+  {# Pending lang ang nasa listahan, galing sa StudentApprovalService. #}
   {% if students.items %}
     <div class="table-wrap">
       <table class="data-table">
@@ -43,6 +45,7 @@
             <td class="cell-date">{{ student.created_at|local_datetime('%b %d, %Y %I:%M %p') }}</td>
             <td class="cell-actions">
               <div class="actions-group">
+                {# Approve at Reject. May CSRF token pareho, POST lang. #}
                 <form method="post" action="{{ url_for('admin.approve_student', user_id=student.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-sm btn-success" type="submit">{{ icon('check', 14) }} Approve</button>

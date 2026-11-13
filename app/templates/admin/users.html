@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Users — NU DentalConnect{% endblock %}
+{# Accounts page ng admin, may search at role filter. #}
 {% block content %}
 
 <header class="page-head">
@@ -14,6 +15,7 @@
   </div>
 </header>
 
+{# GET form, kaya nasa URL yung filter at pwede i-bookmark. #}
 <form class="filter-bar filter-bar--compact" method="get" role="search">
   <div>
     <label class="visually-hidden" for="q">Search by name or email</label>
@@ -64,6 +66,7 @@
             <td>
               <span class="chip chip--quiet">{{ user.role|title }}</span>
               <span class="cell-meta">{{ 'Email verified' if user.email_verified else 'Email not verified' }}</span>
+              {# Students lang ang may approval state. Iba sa verified. #}
               {% if user.role == 'student' %}<span class="cell-meta">{{ 'Approved' if user.is_approved() else 'Awaiting approval' }}</span>{% endif %}
             </td>
             <td class="cell-date">{{ user.created_at|local_datetime('%b %d, %Y') }}</td>
@@ -75,9 +78,11 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn-sm btn-outline" type="submit">{{ 'Deactivate' if user.is_active else 'Activate' }}</button>
                   </form>
+                  {# Set password, hindi para sa admin accounts. #}
                   {% if user.role != 'admin' %}
                     <a class="btn btn-sm btn-outline" href="{{ url_for('admin.set_user_password', user_id=user.id) }}">{{ icon('key', 14) }} Set password</a>
                   {% endif %}
+                  {# Delete: kailangang i-type yung email, tapos confirm sa JS. #}
                   <details class="inline-disclosure">
                     <summary>Delete account</summary>
                     <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}" onsubmit="return confirm('Permanently delete this account and its dependent data?');">

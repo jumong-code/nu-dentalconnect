@@ -1,3 +1,4 @@
+{#- Plain text na bersyon ng reset email. -#}
 Reset your password - NU DentalConnect
 
 Hello {{ user.full_name }},

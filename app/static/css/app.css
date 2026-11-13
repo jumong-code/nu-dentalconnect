@@ -1,24 +1,8 @@
-/* ==========================================================================
-   NU DentalConnect — Clinical Atrium
-   An architectural, wayfinding-led system for a patient recruitment and
-   appointment workspace.
-
-   01 Tokens
-   02 Base and typography
-   03 Layout primitives and utilities
-   04 Buttons, forms, feedback
-   05 Brand, public header and footer
-   06 Persuade: hero, route, listings, paths, FAQ, closing band
-   07 Operate: rail, topbar, page heads, stats, panels, tables, queues
-   08 Auth, profile, about, error and template views
-   09 Responsive
-   ========================================================================== */
-
-/* 01 — Tokens ------------------------------------------------------------- */
+/* Tokens: colors, spacing, at type scale. Isang lugar lang ito,
+   kaya pag nagpalit ako ng theme, dito lahat nagbabago. */
 :root {
   color-scheme: light;
 
-  /* NU structural blues */
   --navy-950: #04142e;
   --navy-900: #071b3d;
   --navy-800: #0a2555;
@@ -29,7 +13,6 @@
   --blue-100: #e4ecfb;
   --blue-050: #f1f6fe;
 
-  /* NU gold — authority and action */
   --gold-500: #d9a61c;
   --gold-400: #f2c64a;
   --gold-300: #f7d97e;
@@ -37,7 +20,6 @@
   --gold-100: #fbf0cf;
   --gold-ink: #6f5200;
 
-  /* Ink and paper */
   --ink: #111e33;
   --ink-soft: #2c3b52;
   --muted: #4e5f77;
@@ -48,7 +30,6 @@
   --line: #d9e1ed;
   --line-strong: #b9c7da;
 
-  /* Status */
   --success: #14664e;
   --success-bg: #e3f3ec;
   --success-line: #a9d8c6;
@@ -62,7 +43,6 @@
   --info-bg: #e7effc;
   --info-line: #b4c8e9;
 
-  /* Type */
   --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
   --font-body: "DM Sans", "Segoe UI", Arial, sans-serif;
   --fs-micro: 0.6875rem;
@@ -80,7 +60,6 @@
   --lh-tight: 1.2;
   --lh-body: 1.65;
 
-  /* Spatial rhythm — 4px base */
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
@@ -91,7 +70,6 @@
   --sp-8: 4rem;
   --sp-9: 6rem;
 
-  /* Shape and depth */
   --r-xs: 2px;
   --r-sm: 4px;
   --r-md: 7px;
@@ -102,12 +80,10 @@
   --shadow-3: 0 24px 48px -24px rgba(7, 27, 61, 0.42);
   --ring: 0 0 0 3px rgba(242, 198, 74, 0.45);
 
-  /* Motion */
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
   --dur-1: 140ms;
   --dur-2: 220ms;
 
-  /* Shell */
   --rail-w: 272px;
   --header-h: 76px;
 
@@ -122,13 +98,14 @@
   scrollbar-color: #8b9dbb var(--paper-deep);
 }
 
-/* 02 — Base and typography ------------------------------------------------ */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
+/* Base at typography. Kasama yung box-sizing reset, tapos yung
+   font at line-height na gamit ng buong app. */
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -277,7 +254,8 @@ hr {
   top: 0;
 }
 
-/* 03 — Layout primitives and utilities ------------------------------------ */
+/* Layout helpers. Yung row at col classes, kailangan para
+   gumana yung Bootstrap grid sa templates. */
 .container {
   width: 100%;
   max-width: 1264px;
@@ -297,7 +275,6 @@ hr {
   max-width: 1408px;
 }
 
-/* Bootstrap-compatible grid contract (row / gutter / column) */
 .row {
   --gutter-x: 1.5rem;
   --gutter-y: 0;
@@ -461,7 +438,8 @@ hr {
   vertical-align: -0.15em;
 }
 
-/* 04 — Buttons, forms, feedback ------------------------------------------- */
+/* Buttons, forms, at feedback. Yung .field-error at .alert
+   dito, kaya pareho ang hitsura ng error sa lahat ng page. */
 .btn {
   position: relative;
   display: inline-flex;
@@ -654,7 +632,6 @@ hr {
   to { transform: rotate(360deg); }
 }
 
-/* Forms */
 .form-label {
   display: block;
   margin-bottom: 7px;
@@ -837,7 +814,6 @@ input[type="search"].form-control {
   font-size: var(--fs-sm) !important;
 }
 
-/* Password toggle */
 .password-field {
   position: relative;
 }
@@ -892,7 +868,6 @@ input[type="search"].form-control {
   display: block;
 }
 
-/* Feedback */
 .flash-host {
   padding-top: 18px;
 }
@@ -1029,7 +1004,7 @@ input[type="search"].form-control {
   color: var(--success);
 }
 
-/* 05 — Brand, public header and footer ------------------------------------ */
+/* Brand, public header, at footer ng mga public page. */
 .brand {
   display: inline-flex;
   align-items: center;
@@ -1225,7 +1200,7 @@ input[type="search"].form-control {
   text-decoration: underline;
 }
 
-/* 06 — Persuade: landing ------------------------------------------------ */
+/* Landing page: hero, steps ng request, listing cards, FAQ. */
 .hero {
   position: relative;
   display: flex;
@@ -1423,7 +1398,6 @@ input[type="search"].form-control {
   to { opacity: 1; transform: none; }
 }
 
-/* Route / request path */
 .route {
   background: var(--surface);
   border-bottom: 1px solid var(--line);
@@ -1509,7 +1483,8 @@ input[type="search"].form-control {
   line-height: 1.55;
 }
 
-/* Listing cards */
+/* Grid ng listing cards. auto-fit para kusang mag-adjust
+   yung bilang ng column sa lapad ng screen. */
 .listing-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1761,7 +1736,6 @@ input[type="search"].form-control {
   transform: translateX(3px);
 }
 
-/* Two audiences */
 .paths {
   position: relative;
   background:
@@ -1848,7 +1822,6 @@ input[type="search"].form-control {
   color: var(--gold-400);
 }
 
-/* FAQ */
 .faq {
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
@@ -1922,7 +1895,6 @@ input[type="search"].form-control {
   line-height: 1.65;
 }
 
-/* Closing conversion band */
 .cta-band {
   background: var(--gold-400);
   color: var(--navy-900);
@@ -1978,7 +1950,7 @@ input[type="search"].form-control {
   color: var(--navy-900);
 }
 
-/* 07 — Operate: workspace ------------------------------------------------ */
+/* Workspace: rail (sidebar), topbar, stats, panels, tables. */
 .workspace-shell {
   min-height: 100dvh;
 }
@@ -2280,7 +2252,6 @@ input[type="search"].form-control {
   text-decoration: underline;
 }
 
-/* Page heads */
 .page-head {
   display: flex;
   flex-wrap: wrap;
@@ -2344,7 +2315,6 @@ input[type="search"].form-control {
   color: #cfdcef;
 }
 
-/* Stats */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
@@ -2423,7 +2393,6 @@ input[type="search"].form-control {
   color: var(--gold-ink);
 }
 
-/* Panels */
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -2477,7 +2446,6 @@ input[type="search"].form-control {
   align-items: start;
 }
 
-/* Tables */
 .table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -2607,7 +2575,6 @@ input[type="search"].form-control {
   font-size: var(--fs-micro);
 }
 
-/* Status pills */
 .status {
   display: inline-flex;
   align-items: center;
@@ -2663,7 +2630,6 @@ input[type="search"].form-control {
   color: var(--muted);
 }
 
-/* Ledger (admin overview rows) */
 .ledger {
   margin: 0;
   padding: 0;
@@ -2728,7 +2694,6 @@ input[type="search"].form-control {
   line-height: 1;
 }
 
-/* Activity and notifications */
 .activity-list {
   display: grid;
   gap: 0;
@@ -2789,7 +2754,6 @@ input[type="search"].form-control {
   padding-left: var(--sp-3);
 }
 
-/* Appointment request queue */
 .request-queue {
   display: grid;
   gap: var(--sp-3);
@@ -2899,7 +2863,6 @@ input[type="search"].form-control {
   min-width: 150px;
 }
 
-/* Next appointment spotlight */
 .next-up {
   position: relative;
   display: grid;
@@ -2978,7 +2941,6 @@ input[type="search"].form-control {
   margin-bottom: 8px;
 }
 
-/* Filter bar and pagination */
 .filter-bar {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) auto;
@@ -3042,7 +3004,6 @@ input[type="search"].form-control {
   gap: var(--sp-2);
 }
 
-/* Empty states */
 .empty-state {
   position: relative;
   display: grid;
@@ -3118,7 +3079,6 @@ input[type="search"].form-control {
   line-height: 1.6;
 }
 
-/* Back links */
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -3144,7 +3104,7 @@ input[type="search"].form-control {
   transform: translateX(-3px);
 }
 
-/* 08 — Auth, profile, about, errors, listing detail ---------------------- */
+/* Auth pages, profile, about, errors, at listing detail. */
 .auth-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.02fr);
@@ -3314,7 +3274,6 @@ input[type="search"].form-control {
   margin-top: 2px;
 }
 
-/* Listing detail */
 .detail-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.85fr);
@@ -3409,7 +3368,6 @@ input[type="search"].form-control {
   font-size: var(--fs-sm);
 }
 
-/* Request appointment */
 .request-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
@@ -3566,7 +3524,6 @@ input[type="search"].form-control {
   text-transform: uppercase;
 }
 
-/* Listing editor */
 .editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -3737,7 +3694,6 @@ input[type="search"].form-control {
   line-height: 1.55;
 }
 
-/* Saved templates and applications */
 .saved-template-list {
   margin: 0;
 }
@@ -3839,7 +3795,6 @@ input[type="search"].form-control {
   margin: 0;
 }
 
-/* Profile */
 .profile-layout {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
@@ -3909,7 +3864,6 @@ input[type="search"].form-control {
   text-align: right;
 }
 
-/* Profile View (Student/Dentist) */
 .profile-card {
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -4041,7 +3995,6 @@ input[type="search"].form-control {
   color: var(--navy-800);
 }
 
-/* About */
 .about-head {
   padding-block: clamp(42px, 6vw, 72px);
 }
@@ -4160,7 +4113,6 @@ input[type="search"].form-control {
   line-height: 1.6;
 }
 
-/* Errors */
 .error-page {
   display: grid;
   justify-items: center;
@@ -4210,7 +4162,6 @@ input[type="search"].form-control {
   margin-top: var(--sp-3);
 }
 
-/* Loading placeholders */
 .skeleton {
   min-height: 1em;
   border-radius: var(--r-sm);
@@ -4234,39 +4185,32 @@ input[type="search"].form-control {
   100% { background-position: 0 50%; }
 }
 
-/* UI Polish Animations ---------------------------------------------------- */
-/* Fade-up on page load */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: none; }
 }
 
-/* Hover lift for cards */
 @keyframes hover-lift {
   from { transform: translateY(0); }
   to { transform: translateY(-4px); }
 }
 
-/* Button press scale */
 @keyframes press-scale {
   0% { transform: scale(1); }
   50% { transform: scale(0.97); }
   100% { transform: scale(1); }
 }
 
-/* Flash slide-in */
 @keyframes slide-in-right {
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: none; }
 }
 
-/* Count-up animation (values set via CSS custom properties) */
 @keyframes count-up {
   from { --count: 0; }
   to { --count: var(--target); }
 }
 
-/* Animation utility classes */
 .fade-up {
   animation: fade-up var(--dur-2) var(--ease) both;
 }
@@ -4286,8 +4230,6 @@ input[type="search"].form-control {
   animation: slide-in-right var(--dur-2) var(--ease) both;
 }
 
-/* Apply the motion system to existing components without changing layout.
-   Only transform and opacity animate, so nothing reflows. */
 .auth-card,
 .panel,
 .stat,
@@ -4318,7 +4260,6 @@ input[type="search"].form-control {
   animation: slide-in-right var(--dur-2) var(--ease) both;
 }
 
-/* Reduced motion guard */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -4330,7 +4271,8 @@ input[type="search"].form-control {
   }
 }
 
-/* 09 — Responsive -------------------------------------------------------- */
+/* Responsive. Mobile first: media queries pataas yung
+   breakpoints, tapos mobile-only rules sa dulo ng file. */
 @media (min-width: 768px) {
   .col-md-6 { flex: 0 0 auto; width: 50%; }
   .col-md-12 { flex: 0 0 auto; width: 100%; }
@@ -4871,7 +4813,6 @@ input[type="search"].form-control {
   }
 }
 
-/* Final surface polish: consistent cards, profiles, applications and request flow. */
 .listing-card {
   min-height: 100%;
   gap: 14px;
@@ -5077,7 +5018,6 @@ input[type="search"].form-control {
   }
 }
 
-/* Student operations and account surfaces */
 .applications-page .applicant,
 .applications-index .applicant {
   border-left-width: 1px;
@@ -5229,7 +5169,6 @@ input[type="search"].form-control {
   }
 }
 
-/* Public profile views share the profile editor's navy, gold and paper surfaces. */
 .profile-page--student > .page-head,
 .profile-page--patient > .page-head,
 .profile-page--admin > .page-head {
@@ -5355,7 +5294,6 @@ input[type="search"].form-control {
   }
 }
 
-/* Full-width profile summary above a two-column account and security workspace. */
 .profile-settings {
   width: min(100%, 1320px);
   margin-inline: auto;
@@ -5699,7 +5637,6 @@ input[type="search"].form-control {
   }
 }
 
-/* Compact profile views: clear page heading, visible back action, useful card density. */
 .profile-page--student > .page-head,
 .profile-page--patient > .page-head,
 .profile-page--admin > .page-head {

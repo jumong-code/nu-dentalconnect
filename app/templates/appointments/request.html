@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}Request appointment — NU DentalConnect{% endblock %}
+{# Request ng appointment sa isang listing. #}
 {% block content %}
 
 <div class="page-band">
@@ -27,6 +28,7 @@
         <p><span class="notice__title">One hour per appointment.</span>Slots are checked for conflicts. Choose a time inside the listing's preferred schedule where possible.</p>
       </div>
 
+      {# datetime-local ang input. Yung conversion sa UTC, sa form. #}
       <form method="post">
         {{ form.hidden_tag() }}
         <div class="field">
@@ -50,6 +52,7 @@
       </form>
     </div>
 
+    {# Summary at steps, pang-paliwanag lang, walang data. #}
     <aside class="stack">
       <div class="summary-card">
         <h2>Request summary</h2>

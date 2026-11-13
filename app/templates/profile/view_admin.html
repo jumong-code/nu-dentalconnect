@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}{{ admin.full_name }} — NU DentalConnect{% endblock %}
+{# Admin profile. Admin lang din ang nakakakita nito. #}
 {% block content %}
 
 <div class="container profile-page profile-page--admin">
@@ -22,6 +23,7 @@
     <p class="profile-role">Administrator</p>
   </div>
 
+  {# Basic info lang, walang contact na pang-patient. #}
   <div class="profile-details">
     <dl class="details-list">
       <div class="details-item">

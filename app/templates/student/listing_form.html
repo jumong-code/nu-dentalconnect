@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}{{ title }} — NU DentalConnect{% endblock %}
+{# Listing editor, ginagamit sa create at edit. Nasa baba yung JS. #}
 {% block content %}
 
 <div class="page-band">
@@ -27,6 +28,7 @@
       <form method="post" class="editor-form" id="listing-editor" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
 
+        {# Picker ng template. Yung data, galing sa listing_template_data. #}
         <section class="template-picker" aria-labelledby="template-heading">
           <div class="template-picker__head">
             <div>
@@ -75,6 +77,7 @@
           </div>
         </section>
 
+        {# 02: location at preferred schedule, galing sa listing. #}
         <section class="form-section" aria-labelledby="section-when">
           <div class="form-section__head">
             <span class="form-section__num" aria-hidden="true">02</span>
@@ -97,6 +100,7 @@
           </div>
         </section>
 
+        {# 03: description at eligibility. Dito lumalabas yung server errors. #}
         <section class="form-section" aria-labelledby="section-patient">
           <div class="form-section__head">
             <span class="form-section__num" aria-hidden="true">03</span>
@@ -118,6 +122,7 @@
           </div>
         </section>
 
+        {# 04: cover image. Optional, may remove button kung may existing. #}
         <section class="form-section" aria-labelledby="section-cover">
           <div class="form-section__head">
             <span class="form-section__num" aria-hidden="true">04</span>
@@ -142,6 +147,7 @@
           </div>
         </section>
 
+        {# Save as template, hindi listing. Sariling submit button ito. #}
         <section class="save-template-row" aria-labelledby="save-template-label">
           <div>
             <label class="form-label" id="save-template-label" for="template_name">Save these fields as a reusable template</label>
@@ -154,6 +160,7 @@
           {% for error in form.template_name.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
         </section>
 
+        {# Publish toggle, save, at clear. Yung clear, JS lang sa browser. #}
         <div class="form-actions">
           <a class="btn btn-outline" href="{{ url_for('main.dashboard') }}">Cancel</a>
           <a class="form-actions__clear" href="#" onclick="clearListingForm(); return false;">{{ icon('trash', 14) }} Clear all fields</a>
@@ -185,15 +192,16 @@
   </div>
 </section>
 
+{# JSON ng templates. tojson para safe sa HTML at JS. #}
 <script id="listing-template-data" type="application/json">{{ template_data|tojson }}</script>
 
 <script>
-  // Initialize template picker to auto-fill form fields
+
+  {# Picker JS: both built-in at saved templates, tapos fill ng fields. #}
   document.addEventListener('DOMContentLoaded', function() {
     const templateSelect = document.getElementById('template-choice');
     const templateData = JSON.parse(document.getElementById('listing-template-data').textContent);
 
-    // Combine built-in and saved templates into a single lookup
     const allTemplates = {};
     if (templateData.builtIn) {
       templateData.builtIn.forEach(t => { allTemplates[t.id] = t; });
@@ -214,7 +222,6 @@
 
         const template = allTemplates[templateId];
 
-        // Fill form fields (skip location and preferred_schedule)
         const titleField = document.querySelector('input[name="title"]');
         const categoryField = document.querySelector('input[name="category"]');
         const descField = document.querySelector('textarea[name="description"]');
@@ -225,7 +232,6 @@
         if (descField) descField.value = template.description || '';
         if (eligField) eligField.value = template.eligibility || '';
 
-        // Trigger input events for any validation listeners
         [titleField, categoryField, descField, eligField].forEach(f => {
           if (f) f.dispatchEvent(new Event('input', { bubbles: true }));
         });
@@ -238,7 +244,7 @@
     }
   });
 
-  // Clear all form fields - globally accessible for onclick handler
+  {# Clear all: bura lahat ng fields at reset yung picker. #}
   function clearListingForm() {
     if (!confirm('Clear all fields? This cannot be undone.')) return;
 
@@ -259,7 +265,6 @@
       }
     });
 
-    // Reset template selector
     const templateSelect = document.getElementById('template-choice');
     if (templateSelect) {
       templateSelect.value = '';
@@ -271,6 +276,7 @@
     }
   }
 
+  {# Remove cover via fetch, may CSRF token sa body ng POST. #}
   function removeCover(listingId, button) {
     if (!confirm('Remove this cover image?')) return;
 

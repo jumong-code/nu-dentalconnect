@@ -1,3 +1,5 @@
+# Mga service function. Functions lang talaga ito, walang
+# class, para simple at madaling tawagin sa routes.
 import hashlib
 import hmac
 import re
@@ -12,19 +14,22 @@ from .models import Appointment, AuditLog, DentistryStudent, Notification, OTPVe
 from .time_utils import MANILA_TZ
 
 
+# Isang lugar lang para sa lahat ng email. Kapag walang SMTP
+# config, hindi mag-crash: mag-log lang at False ang sagot.
 def send_email(to, subject, template, **context):
     if not current_app.config.get("MAIL_SERVER") or not current_app.config.get("MAIL_USERNAME"):
         current_app.logger.info("Email not sent: SMTP is not configured (recipient omitted).")
         return False
     try:
-        # Templates use {{ now.year }} in the footer. Supplying "now" here keeps
-        # every email renderable even when a caller forgets to pass it.
+        # Kailangan ng email template yung now para sa year sa footer.
+        # Default dito para hindi mag-render error kung may nakalimot.
         context.setdefault("now", datetime.now(timezone.utc).astimezone(MANILA_TZ))
-        context.setdefault("authorization_notice", current_app.config.get("AUTHORIZATION_NOTICE", ""))
         message = Message(subject=subject, recipients=[to])
         message.html = render_template(f"emails/{template}.html", **context)
         try:
             message.body = render_template(f"emails/{template}.txt", **context)
+        # Ibang email walang .txt version. Dito yung plain text
+        # fallback galing sa HTML.
         except TemplateNotFound:
             message.body = unescape(re.sub(r"<[^>]+>", " ", message.html)).strip()
         mail.send(message)
@@ -34,6 +39,8 @@ def send_email(to, subject, template, **context):
         return False
 
 
+# Helper para mag-add ng audit row kahit walang request
+# context, tulad ng CLI. System ang actor pag wala talagang user.
 def record_audit(action, entity_type, entity_id=None, details=None, actor=None):
     if actor is None and has_request_context():
         from flask_login import current_user
@@ -49,19 +56,26 @@ def record_audit(action, entity_type, entity_id=None, details=None, actor=None):
     ))
 
 
+# HMAC gamit yung SECRET_KEY. Kahit mabasa yung database,
+# hindi makukuha yung 6-digit code galing sa digest.
 def _otp_digest(challenge_id, code):
     secret = current_app.config["SECRET_KEY"].encode("utf-8")
     return hmac.new(secret, f"{challenge_id}:{code}".encode("ascii"), hashlib.sha256).hexdigest()
 
 
+# Sa development lang ito. Walang SMTP sa local, kaya sa
+# console nakalagay yung code para makapag-test.
 def log_dev_otp(email, code):
-    """Log OTP to console in development when SMTP is not configured."""
     if current_app.config.get("APP_ENV") == "development":
         current_app.logger.info(f"[DEV OTP] Email: {email} | Code: {code}")
 
 
+# Gumagawa ng bagong OTP. May limit: 60 seconds bago
+# makahingi ulit, at max 5 per hour per user.
 def issue_email_otp(user):
     now = utcnow()
+    # Lock muna yung user row para hindi sabay mag-generate ng
+    # code kung dalawang tab yung nag-request.
     db.session.execute(db.select(User.id).where(User.id == user.id).with_for_update())
     latest = db.session.scalar(
         db.select(OTPVerification).where(OTPVerification.user_id == user.id)
@@ -83,11 +97,10 @@ def issue_email_otp(user):
     db.session.flush()
     challenge.code_digest = _otp_digest(challenge.id, code)
 
-    # Log OTP in development when SMTP is not configured
     log_dev_otp(user.email, code)
 
-    # Send OTP email (verification link removed - OTP only). In production, do
-    # not invalidate the previous usable code when delivery fails.
+    # Sa production, kapag hindi nasend yung email, tinatanggal
+    # ko yung bagong challenge. Sa dev, hinahayaan ko para may code.
     sent = send_email(user.email, "Verify your NU DentalConnect email", "otp", user=user, code=code, expires_minutes=10)
     if not sent and current_app.config.get("APP_ENV") != "development":
         db.session.delete(challenge)
@@ -97,6 +110,8 @@ def issue_email_otp(user):
     return sent
 
 
+# Tinatawag pag nagpalit ng email. Yung unused codes, expired
+# na agad para hindi magamit sa lumang address.
 def revoke_email_otps(user):
     now = utcnow()
     db.session.execute(db.update(OTPVerification).where(
@@ -105,6 +120,8 @@ def revoke_email_otps(user):
     ).values(consumed_at=now))
 
 
+# Hinahanap yung pinakabagong unused at hindi pa expired na
+# code. Limit: 5 attempts per code at 5 per hour.
 def verify_email_otp(user, code):
     now = utcnow()
     challenge = db.session.scalar(
@@ -123,23 +140,26 @@ def verify_email_otp(user, code):
     if attempts_this_hour >= 5:
         return False
     expected = _otp_digest(challenge.id, code)
+    # compare_digest para hindi malaman kung saang part nagkamali
+    # (timing attack). Maling code, dagdagan yung attempts.
     if not hmac.compare_digest(challenge.code_digest, expected):
         challenge.attempts += 1
         return False
     challenge.attempts += 1
     challenge.consumed_at = now
     user.email_verified = True
-    # The route writes the otp_verified audit row through AuditLogger; keeping a
-    # second insert here would duplicate the event.
     return True
 
 
+# Pasimple lang: isang row sa notifications. Ang commit,
+# sa route na.
 def notify(user, message):
     db.session.add(Notification(user=user, message=message))
 
 
+# One-hour slots ito. Titingnan ko yung katabi para hindi
+# mag-overlap yung confirmed appointments ng student.
 def has_student_conflict(student_id, starts_at, exclude_id=None):
-    # One-hour slots; checking adjacent starts prevents overlapping confirmed appointments.
     query = db.select(Appointment).where(
         Appointment.student_id == student_id,
         Appointment.status == "confirmed",
@@ -151,6 +171,8 @@ def has_student_conflict(student_id, starts_at, exclude_id=None):
     return db.session.scalar(query.with_for_update()) is not None
 
 
+# Para hindi makapag-request yung patient ng doble sa
+# kaparehong oras, kahit pending pa lang yung isa.
 def has_active_student_booking(student_id, patient_id, starts_at):
     query = db.select(Appointment.id).where(
         Appointment.student_id == student_id,
@@ -162,9 +184,11 @@ def has_active_student_booking(student_id, patient_id, starts_at):
     return db.session.scalar(query) is not None
 
 
+# Lock yung student row bago mag-confirm. Kung sabay kasi
+# ang dalawang confirm, puwedeng magka-conflict yung slot.
 def confirm_appointment(appointment):
-    # Lock the student row so concurrent confirmations for an otherwise empty schedule serialize.
     db.session.execute(db.select(DentistryStudent.id).where(DentistryStudent.id == appointment.student_id).with_for_update())
+    # Bawal mag-confirm ng nakalipas na oras o may ka-conflict.
     if appointment.starts_at <= utcnow() or has_student_conflict(appointment.student_id, appointment.starts_at, appointment.id):
         return False
     appointment.status = "confirmed"

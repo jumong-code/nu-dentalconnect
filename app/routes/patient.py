@@ -1,3 +1,5 @@
+# Patient blueprint: apply sa listing, request ng appointment,
+# cancel, reschedule, at delete. May ownership check sa lahat.
 from flask import Blueprint, abort, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
@@ -10,17 +12,22 @@ from ..services import confirm_appointment, has_active_student_booking, notify, 
 bp = Blueprint("patient", __name__)
 
 
+# Role guard. Pag hindi patient, 403 agad, hindi redirect.
 def patient_required():
     if current_user.role != "patient":
         abort(403)
 
 
+# Apply sa listing. Dalawang URL ang naka-map dito, kaya may
+# dalawang decorator.
 @bp.route("/opportunities/<int:listing_id>/apply", methods=["POST"])
 @bp.route("/appointments/<int:listing_id>/apply", methods=["POST"])
 @login_required
 def apply(listing_id):
     patient_required()
     listing = db.get_or_404(RecruitmentListing, listing_id)
+    # Draft at closed na listing, 404 sa patient para hindi
+    # maabot kahit i-type yung URL.
     if listing.status != "published":
         abort(404)
     form = ApplicationForm()
@@ -34,6 +41,8 @@ def apply(listing_id):
             db.session.commit()
             send_email(listing.student.user.email, "A patient applied for your procedure listing", "notice", user=listing.student.user, message=f"A patient applied for '{listing.title}'. Sign in to review the patient application.")
             flash("Your application has been sent.", "success")
+        # Unique constraint sa database ang humaharang sa doble apply,
+        # kaya dito ko nahuhuli at nag-flash ng friendly message.
         except IntegrityError:
             db.session.rollback()
             flash("You have already applied to this procedure listing.", "info")
@@ -42,6 +51,8 @@ def apply(listing_id):
     return redirect(url_for("main.opportunity_detail", listing_id=listing.id))
 
 
+# Withdraw. Sariling application lang, at pending lang ang
+# puwedeng bawiin.
 @bp.route("/applications/<int:application_id>/withdraw", methods=["POST"])
 @login_required
 def withdraw(application_id):
@@ -57,6 +68,7 @@ def withdraw(application_id):
     return redirect(url_for("main.dashboard"))
 
 
+# Request ng oras. Dalawang URL din ito para sa lumang path.
 @bp.route("/opportunities/<int:listing_id>/appointments", methods=["GET", "POST"])
 @bp.route("/appointments/<int:listing_id>/request", methods=["GET", "POST"])
 @login_required
@@ -71,7 +83,11 @@ def request_appointment(listing_id):
         if starts_at <= utcnow():
             flash("Choose a date and time in the future.", "error")
         else:
+            # Lock yung student row bago mag-check ng conflict, para
+            # hindi sabay makalusot ang dalawang request.
             db.session.execute(db.select(DentistryStudent.id).where(DentistryStudent.id == listing.student_id).with_for_update())
+            # May pending o confirmed na malapit sa oras na yun, kaya
+            # hindi na ako magdadagdag ng bago.
             if has_active_student_booking(listing.student_id, current_user.patient_profile.id, starts_at):
                 db.session.rollback()
                 flash("You already have an active appointment request near that time with this student.", "info")
@@ -88,6 +104,8 @@ def request_appointment(listing_id):
     return render_template("appointments/request.html", form=form, listing=listing)
 
 
+# Cancel. Yung can_cancel() sa model ang nagdedesisyon kung
+# puwede pa.
 @bp.route("/appointments/<int:appointment_id>/cancel", methods=["POST"])
 @login_required
 def cancel_appointment(appointment_id):
@@ -106,6 +124,8 @@ def cancel_appointment(appointment_id):
     return redirect(url_for("main.dashboard"))
 
 
+# Bagong oras galing sa patient. Nagiging
+# reschedule_requested, hindi pa confirmed.
 @bp.route("/appointments/<int:appointment_id>/reschedule", methods=["POST"])
 @login_required
 def reschedule(appointment_id):
@@ -126,6 +146,8 @@ def reschedule(appointment_id):
     return redirect(url_for("main.dashboard"))
 
 
+# Tinatanggap yung oras na ni-propose ng student, tapos
+# conflict check pa rin bago ma-confirm.
 @bp.route("/appointments/<int:appointment_id>/accept-proposal", methods=["POST"])
 @login_required
 def accept_proposal(appointment_id):
@@ -149,17 +171,17 @@ def accept_proposal(appointment_id):
     return redirect(url_for("main.dashboard"))
 
 
+# Hard delete para sa hindi pa confirmed na record lang.
 @bp.route("/appointments/<int:appointment_id>/delete", methods=["POST"])
 @login_required
 def delete_appointment(appointment_id):
-    """Hard delete an appointment (only for non-confirmed appointments)."""
     patient_required()
     appointment = db.get_or_404(Appointment, appointment_id)
     if appointment.patient_id != current_user.patient_profile.id:
         abort(403)
 
-    # Only allow hard delete for pending, rejected, withdrawn, cancelled appointments
-    # Confirmed and completed appointments should use cancel flow
+    # Confirmed at completed, hindi puwedeng i-delete dito.
+    # Cancel ang tamang paraan para doon.
     if appointment.status not in {"pending", "rejected", "withdrawn", "cancelled"}:
         flash("This appointment cannot be deleted. Use cancel instead.", "error")
         return redirect(url_for("main.dashboard"))

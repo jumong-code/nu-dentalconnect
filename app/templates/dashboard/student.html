@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Student dashboard — NU DentalConnect{% endblock %}
+{# Student dashboard: stats, listings, at queue ng requests. #}
 {% block content %}
 
+{# Bilang ng confirmed at open requests, galing sa appointment_counts. #}
 {% set confirmed = appointment_counts.get('confirmed', 0) %}
 {% set open_request_count = appointment_counts.get('pending', 0) + appointment_counts.get('reschedule_requested', 0) %}
 {% set requests = appointments|selectattr('status', 'in', ['pending', 'reschedule_requested'])|list %}
@@ -19,6 +21,7 @@
   </div>
 </header>
 
+{# Apat na stat cards. Yung may pending, may attention styling. #}
 <div class="stat-grid">
   <article class="stat">
     <p class="stat__label">Published listings</p>
@@ -53,6 +56,7 @@
       <a class="link-arrow" href="{{ url_for('student.create_listing') }}">{{ icon('plus', 15) }} New listing</a>
     </div>
 
+    {# Talaan ng listings, may status button at delete form. #}
     {% if listings %}
       <div class="table-wrap">
         <table class="data-table data-table--stack">
@@ -80,6 +84,7 @@
                 <div class="row-actions d-flex flex-wrap align-items-center gap-2">
                   <a class="btn btn-sm btn-outline" href="{{ url_for('student.edit_listing', listing_id=l.id) }}">Edit</a>
                   <a class="btn btn-sm btn-outline" href="{{ url_for('student.listing_applications', listing_id=l.id) }}">Review</a>
+                  {# Draft, Publish. Published, Close. Closed, reopen as draft. #}
                   {% if l.status == 'draft' %}
                     <form method="post" action="{{ url_for('student.listing_status', listing_id=l.id, status='published') }}">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -141,6 +146,7 @@
       {% if open_request_count %}<span class="chip chip--navy">{{ open_request_count }} waiting</span>{% endif %}
     </div>
 
+    {# Request queue: confirm, decline, o propose ng ibang oras. #}
     {% if requests %}
       <div class="request-queue">
         {% for a in requests %}
@@ -196,6 +202,7 @@
   </article>
 </div>
 
+{# Confirmed table. Mark completed lang pag tapos na yung oras. #}
 {% if confirmed_appointments %}
 <article class="panel mt-4">
   <div class="panel__head">

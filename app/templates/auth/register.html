@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, password_field %}
 {% block title %}Create account — NU DentalConnect{% endblock %}
+{# Registration form. Yung student fields, nakatago pag patient. #}
 {% block content %}
 <section class="auth-shell">
   <aside class="auth-aside">
@@ -15,7 +16,6 @@
         <li>{{ icon('shield') }}<span>No student ID numbers and no health records.</span></li>
       </ul>
     </div>
-    <p class="auth-aside__foot">{{ icon('info') }} {{ authorization_notice }}</p>
   </aside>
 
   <div class="auth-main">
@@ -26,6 +26,7 @@
       </div>
 
       <form method="post">
+        {# CSRF token dito. Bawat POST form may isa nito. #}
         {{ form.hidden_tag() }}
 
         <div class="field">
@@ -66,6 +67,8 @@
           {{ password_field(form.confirm, 'confirm', 'new-password') }}
         </div>
 
+        {# Student fields: hidden at disabled pag patient, para hindi #}
+        {# mapasa yung year level at campus. app.js ang nagsho-show. #}
         {% set student_role = form.role.data == 'student' %}
         <div class="form-grid form-grid--two" data-student-details{% if not student_role %} hidden{% endif %}>
           <div class="field">
@@ -83,6 +86,7 @@
         </div>
 
         <div class="field">
+          {# Reminder na account at scheduling data lang, walang health info. #}
           <span class="form-help">Do not include sensitive health information in your profile. This platform stores account and scheduling details only.</span>
         </div>
 

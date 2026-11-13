@@ -2,8 +2,10 @@
 {% from '_macros.html' import icon %}
 {% block title %}NU DentalConnect — Find a dental appointment{% endblock %}
 {% block description %}Browse dental procedures that dentistry students are seeking patients for, request a time, and follow the student's response.{% endblock %}
+{# Landing page: hero, paano gumagana, listings, at FAQ. #}
 {% block content %}
 
+{# Hero na may search form papunta sa browse page. #}
 <section class="hero" aria-labelledby="hero-title">
   <img class="hero__image" src="{{ url_for('static', filename='images/nu-campus.png') }}" alt="NU's geometric campus building under a clear blue sky">
   <div class="hero__wash" aria-hidden="true"></div>
@@ -13,6 +15,7 @@
       <h1 id="hero-title">Appointments start with a conversation.</h1>
       <p class="hero__lede">Find procedures dentistry students are seeking patients for. Request a time that works for you, then follow the student's response in your account.</p>
 
+      {# GET ito, kaya nasa URL yung search at naibabahagi yung link. #}
       <form class="hero__search" method="get" action="{{ url_for('main.opportunities') }}" role="search">
         <label class="visually-hidden" for="home-search">Search appointment listings</label>
         <input id="home-search" name="q" type="search" placeholder="Try a procedure or service" autocomplete="off">
@@ -32,6 +35,7 @@
   </div>
 </section>
 
+{# Tatlong hakbang: pumili ng procedure, humingi ng oras, hintayin. #}
 <section class="route" id="how-it-works" aria-labelledby="route-title">
   <div class="container route__inner">
     <div class="route__intro">
@@ -70,6 +74,7 @@
       <a class="link-arrow" href="{{ url_for('main.opportunities') }}">Browse all appointments {{ icon('arrow-right', 16) }}</a>
     </div>
 
+    {# Tatlong pinakabagong published listing lang ang ipinapakita. #}
     {% if listings %}
       <div class="listing-grid">
         {% for listing in listings %}{% include 'recruitment/_card.html' %}{% endfor %}
@@ -88,6 +93,7 @@
   </div>
 </section>
 
+{# Dalawang path: para sa patient at para sa student. #}
 <section class="paths" aria-labelledby="paths-title">
   <div class="container paths__inner">
     <div class="paths__intro">
@@ -116,6 +122,7 @@
   </div>
 </section>
 
+{# FAQ gamit ang details at summary, walang JS na kailangan. #}
 <section class="section section--white" aria-labelledby="faq-title">
   <div class="container faq">
     <div class="faq__intro">
@@ -140,6 +147,7 @@
   </div>
 </section>
 
+{# Closing CTA papunta sa registration. #}
 <section class="cta-band" aria-labelledby="cta-title">
   <div class="container cta-band__inner">
     <div>

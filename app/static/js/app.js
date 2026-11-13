@@ -1,14 +1,12 @@
-/* NU DentalConnect — interface behaviour. */
+// Buong UI behaviour ng app. Naka-IIFE para hindi magkalat
+// yung variables sa global scope.
 (function () {
   'use strict';
 
-  // ==========================================================================
-  // Validation Enhancer — mirrors WTForms server rules to client-side
-  // ==========================================================================
-
-  // Validation rule definitions mirroring WTForms validators
+  // Mirror ng WTForms rules sa server. Client side lang ito, kaya
+  // mabilis makita yung error bago pa mag-submit.
   const VALIDATION_RULES = {
-    // RegisterForm
+
     'full_name': {
       required: true,
       minLength: 2,
@@ -27,8 +25,7 @@
     'phone': {
       required: false,
       maxLength: 20,
-      // Mirrors PHONE_PATTERN in app/forms.py: + only first, digits and single
-      // hyphens only, no consecutive or trailing hyphen.
+
       pattern: '^\\+?[0-9](?:-?[0-9])*$',
       patternMessage: 'Enter a phone number with 7 to 15 digits, no more than 20 characters, using only numbers and hyphens (with + only at the start).',
       custom: function(value) {
@@ -52,9 +49,6 @@
       maxLength: 128,
     },
 
-    // ProfileForm
-    // Registration uses a fixed select; the profile keeps a free-text field.
-    // The server is authoritative for both.
     'year_level': {
       required: false,
       maxLength: 80,
@@ -88,7 +82,6 @@
       maxLength: 500,
     },
 
-    // ListingForm
     'title': {
       required: true,
       minLength: 3,
@@ -122,13 +115,11 @@
       maxLength: 2000,
     },
 
-    // ApplicationForm
     'message': {
       required: false,
       maxLength: 1000,
     },
 
-    // AppointmentForm / ScheduleForm
     'starts_at': {
       required: true,
       type: 'datetime-local',
@@ -142,7 +133,6 @@
       maxLength: 1000,
     },
 
-    // VerifyOTPForm
     'code': {
       required: true,
       pattern: '^\\d{6}$',
@@ -151,26 +141,27 @@
       maxLength: 6,
     },
 
-    // ResetPasswordForm / ChangePasswordForm
     'current_password': {
       required: true,
       maxLength: 128,
     },
   };
 
-  // Helper: Set attribute if not already present
+  // Helper: mag-set ng attribute kung wala pa, para hindi
+  // ma-override yung nasa template.
   function setAttr(el, name, value) {
     if (!el.hasAttribute(name)) {
       el.setAttribute(name, value);
     }
   }
 
-  // Helper: Set data attribute
+  // Helper para sa data- attribute.
   function setData(el, name, value) {
     setAttr(el, 'data-' + name, value);
   }
 
-  // Apply validation rules to a form field
+  // Lalagyan ng required, pattern, at type yung input base sa
+  // rules, tapos novalidate yung form para sariling error ang gamit.
   function enhanceField(input, rules) {
     if (!input || !rules) return;
 
@@ -209,7 +200,7 @@
     }
   }
 
-  // Apply equalto validation (confirm password/email)
+  // Confirm password at confirm email: dapat pareho sa target field.
   function enhanceEqualTo(input, targetId) {
     const target = document.getElementById(targetId);
     if (target) {
@@ -218,7 +209,8 @@
     }
   }
 
-  // Show field error with consistent UI
+  // Isang span na .field-error lang, may role=alert para sa
+  // screen reader, tapos is-invalid yung input.
   function showFieldError(input, message) {
     clearFieldError(input);
 
@@ -234,7 +226,7 @@
     wrapper.appendChild(errorEl);
   }
 
-  // Clear field error
+  // Burahin muna yung dating error para hindi dumami kada blur.
   function clearFieldError(input) {
     input.classList.remove('is-invalid');
     input.setAttribute('aria-invalid', 'false');
@@ -246,7 +238,8 @@
     }
   }
 
-  // Validate a single field
+  // Isa-isang check: required, haba, pattern, custom, equalto,
+  // at future date para sa datetime-local.
   function validateField(input) {
     const form = input.closest('form');
     if (!form) return true;
@@ -301,7 +294,9 @@
     }
 
     if (valid && input.value && input.type === 'datetime-local') {
-      // Compare against the site's standard wall clock, independent of device timezone.
+
+      // Manila time ang basehan (UTC+8), hindi yung timezone ng
+      // device, para pareho sa server.
       const siteNow = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16);
       if (input.value <= siteNow) {
         valid = false;
@@ -318,7 +313,8 @@
     return valid;
   }
 
-  // Main enhancement function - scans all forms and applies rules
+  // I-scan lahat ng form na wala pang data-enhanced, tapos
+  // i-attach yung listeners. Ganito para safe sa dynamic forms.
   function enhanceAllForms() {
     const forms = document.querySelectorAll('form:not([data-enhanced="true"])');
 
@@ -331,11 +327,11 @@
         input.addEventListener('input', () => clearFieldError(input));
       });
 
-      // Detect login form: has password field but no confirm field
       const hasConfirmField = form.querySelector('[name="confirm"], [name$="_confirm"]');
+      // Login form ang relaxed: walang minLength at strength check,
+      // kasi may lumang password na pwedeng mas maikli.
       const isLoginForm = !hasConfirmField && form.querySelector('[name="password"]');
 
-      // Use relaxed rules for login form (no minLength or strength check for legacy passwords)
       const rulesForForm = isLoginForm ? { ...VALIDATION_RULES, password: { required: true, maxLength: 128 } } : VALIDATION_RULES;
 
       form.querySelectorAll('input[name], select[name], textarea[name]').forEach(input => {
@@ -344,7 +340,6 @@
           enhanceField(input, rulesForForm[name]);
         }
 
-        // Special handling for confirm fields (EqualTo)
         if (name === 'confirm' || name.endsWith('_confirm')) {
           const targetName = name.replace('_confirm', '').replace('confirm', 'password');
           const target = form.querySelector('[name="' + targetName + '"]');
@@ -354,14 +349,14 @@
         }
       });
 
-      // Handle datetime-local future date validation
       form.querySelectorAll('input[type="datetime-local"]').forEach(input => {
         input.addEventListener('change', () => validateField(input));
       });
     });
   }
 
-  // Handle form submit - run all validations
+  // Bago mag-submit, patakbuhin lahat ng validation. Pag may
+  // mali, pigilan yung submit at i-focus yung unang error.
   function handleFormSubmit(event) {
     const form = event.target;
     let allValid = true;
@@ -386,11 +381,9 @@
     return allValid;
   }
 
-  // ==========================================================================
-  // Original UI behaviour
-  // ==========================================================================
-
-  // Keep a submitted label from being lost when the browser blocks a second submit.
+  // I-disable yung submit button pag nagsimula na, para hindi
+  // madoble ang POST. Yung may name, hinahayaan ko kasi iba
+  // yung action depende sa pinindot na button.
   document.addEventListener('submit', function (event) {
     const form = event.target;
     if (!form.matches || !form.matches('form')) return;
@@ -402,14 +395,16 @@
     button.disabled = true;
   });
 
-  // Set min on datetime-local fields to now
+  // Minimum date = ngayon, para hindi pumili ng nakalipas na oras.
   document.querySelectorAll('input[type="datetime-local"]').forEach(function (field) {
     if (field.min) return;
-    // Appointment inputs use the site's standard wall clock, not device-local time.
+
     const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
     field.min = now.toISOString().slice(0, 16);
   });
 
+  // Mobile menu. Escape at click sa labas, nagsasara. Naka-sync
+  // yung aria-expanded para tama sa screen reader.
   const navToggle = document.querySelector('.nav-toggle');
   const navigation = document.querySelector('#navigation');
   if (navToggle && navigation) {
@@ -446,6 +441,7 @@
     });
   }
 
+  // Close button ng flash message. Tanggalin lang yung alert.
   document.querySelectorAll('.alert__close, .alert .btn-close').forEach(function (button) {
     button.addEventListener('click', function () {
       const alert = button.closest('.alert');
@@ -453,6 +449,8 @@
     });
   });
 
+  // Template picker sa listing editor. Yung JSON nasa script tag.
+  // Pag sira yung JSON, empty list na lang ang gamit.
   const templateDataNode = document.querySelector('#listing-template-data');
   const templateChoice = document.querySelector('#template-choice');
   if (templateDataNode && templateChoice) {
@@ -494,13 +492,8 @@
     });
   }
 
-  // ==========================================================================
-  // Initialization
-  // ==========================================================================
-
-  // ==========================================================================
-  // Password show/hide toggle
-  // ==========================================================================
+  // Show/hide ng password. type=button kaya hindi nag-submit, at
+  // may keyboard support para sa Enter at Space.
   function initPasswordToggles() {
     document.querySelectorAll('.password-toggle').forEach(function (toggle) {
       if (toggle.hasAttribute('data-initialized')) return;
@@ -517,7 +510,6 @@
         input.type = isPressed ? 'password' : 'text';
       });
 
-      // Keyboard support
       toggle.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -527,9 +519,8 @@
     });
   }
 
-  // ==========================================================================
-  // Student-only registration fields
-  // ==========================================================================
+  // Student fields: hidden at disabled pag patient, para hindi
+  // mapasa yung year level at campus sa server.
   function initStudentFields() {
     const roleSelect = document.querySelector('select[name="role"]');
     const details = document.querySelector('[data-student-details]');
@@ -548,20 +539,19 @@
     sync();
   }
 
-  // ==========================================================================
-  // Count-up animation for stats
-  // ==========================================================================
+  // Count-up animation ng stats. requestAnimationFrame para
+  // smooth, tapos exact na bilang ang huling value.
   function animateCountUp(element) {
     const target = parseInt(element.dataset.target, 10) || parseInt(element.textContent.replace(/,/g, ''), 10);
     if (isNaN(target)) return;
 
-    const duration = 1200; // ms
+    const duration = 1200;
     const start = performance.now();
 
     function update(currentTime) {
       const elapsed = currentTime - start;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
+
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.floor(target * eased);
       element.textContent = current.toLocaleString();
@@ -576,8 +566,10 @@
     requestAnimationFrame(update);
   }
 
+  // Simulan lang pag nakita na sa viewport, para hindi sayang
+  // sa mga card na nasa ilalim pa.
   function initCountUpAnimations() {
-    // Use IntersectionObserver to trigger count-up when stat cards enter viewport
+
     const statValues = document.querySelectorAll('.stat__value[data-count-up="true"], .stat__value[data-target]');
     if (!statValues.length) return;
 
@@ -593,15 +585,12 @@
     statValues.forEach(el => observer.observe(el));
   }
 
-  // ==========================================================================
-  // Client-side formatters (mirrors server-side FieldFormatter)
-  // ==========================================================================
+  // Mirror ng FieldFormatter.format_year_level sa server.
   function formatYearLevel(value) {
     if (!value) return '';
     const cleaned = value.trim();
     if (!cleaned) return '';
 
-    // Year 1-5 patterns (using /i flag for case-insensitive instead of (?i))
     const patterns = [
       { re: /^year\s*([1-5])$/i, fmt: m => 'Year ' + m[1] },
       { re: /^([1-5])(?:st|nd|rd|th)\s*year$/i, fmt: m => 'Year ' + m[1] },
@@ -613,10 +602,11 @@
       const m = cleaned.match(p.re);
       if (m) return p.fmt(m);
     }
-    // No match - normalize whitespace only
+
     return cleaned.replace(/\s+/g, ' ');
   }
 
+  // Mirror ng format_campus. Yung acronyms, uppercase pa rin.
   function formatCampus(value) {
     if (!value) return '';
     const cleaned = value.trim();
@@ -636,7 +626,6 @@
     const lower = cleaned.toLowerCase();
     if (corrections[lower]) return corrections[lower];
 
-    // Split preserving whitespace
     return cleaned.split(/(\s+)/).map(w => {
       if (!w || w.trim() === '') return w;
       const upper = w.toUpperCase();
@@ -646,8 +635,9 @@
     }).join('');
   }
 
+  // Pag umalis sa field, i-format agad yung year level at campus.
   function initFormatters() {
-    // Auto-format year_level and campus fields on blur
+
     document.querySelectorAll('input[name="year_level"]').forEach(input => {
       input.addEventListener('blur', () => {
         const formatted = formatYearLevel(input.value);
@@ -667,7 +657,7 @@
     });
   }
 
-  // Expose for manual triggering if needed
+  // Naka-expose para puwedeng tawagin manually kung kailangan.
   window.NUDentalConnect = {
     enhanceAllForms,
     validateField,
@@ -678,7 +668,8 @@
     initFormatters,
   };
 
-  // Initialize count-up animations and formatters
+  // Simulan lahat pag ready na yung DOM. Tapos observe ng bagong
+  // form sa DOM para ma-enhance din.
   function init() {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function () {
@@ -695,7 +686,6 @@
       initPasswordToggles();
     }
 
-    // Also enhance forms added dynamically
     const observer = new MutationObserver(function (mutations) {
       mutations.forEach(function (mutation) {
         mutation.addedNodes.forEach(function (node) {

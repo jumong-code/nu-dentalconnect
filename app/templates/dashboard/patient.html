@@ -1,8 +1,11 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Patient dashboard — NU DentalConnect{% endblock %}
+{# Patient dashboard: susunod na appointment, talaan, at applications. #}
 {% block content %}
 
+{# Pinakamalapit na appointment: yung confirmed, pending, o #}
+{# reschedule, tapos sorted sa starts_at, unang isa lang. #}
 {% set upcoming = appointments|selectattr('status', 'in', ['confirmed', 'pending', 'reschedule_requested'])|sort(attribute='starts_at')|first %}
 
 <header class="page-head">
@@ -16,6 +19,7 @@
   </div>
 </header>
 
+{# Next-up card: date, oras, lugar, at status ng appointment. #}
 {% if upcoming %}
 <section class="next-up" aria-labelledby="next-up-title">
   <div class="next-up__date" aria-hidden="true">
@@ -53,6 +57,7 @@
       </div>
     </div>
 
+    {# Talaan ng appointments. Yung actions, depende sa status. #}
     {% if appointments %}
       <div class="table-wrap">
         <table class="data-table data-table--stack">
@@ -75,6 +80,7 @@
               <td data-label="Status">{{ status_pill(a.status) }}</td>
               <td data-label="Actions">
                 <div class="row-actions">
+                  {# May proposed time: accept form, may CSRF token. #}
                   {% if a.status == 'reschedule_requested' and a.proposed_at %}
                     <form method="post" action="{{ url_for('patient.accept_proposal', appointment_id=a.id) }}">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -92,6 +98,8 @@
                       </form>
                     </details>
                   {% endif %}
+                  {# Yung can_cancel() sa model ang nagdedesisyon kung lalabas #}
+                  {# yung cancel button. #}
                   {% if a.can_cancel() %}
                     <form method="post" action="{{ url_for('patient.cancel_appointment', appointment_id=a.id) }}" onsubmit="return confirm('Cancel this appointment?');">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -127,6 +135,7 @@
       </div>
     </div>
 
+    {# Applications. Pending lang ang may withdraw button. #}
     {% if applications %}
       <ul class="activity-list">
         {% for a in applications %}

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}Saved templates — NU DentalConnect{% endblock %}
+{# Saved templates page. Built-in at sariling templates. #}
 {% block content %}
 
 <div class="page-band">
@@ -21,7 +22,8 @@
 
 <section class="section section--tint">
   <div class="container container--narrow">
-    <!-- Built-in templates -->
+
+    {# Built-in starters. Hindi ma-edit o made-delete, kopyahin lang. #}
     <div class="template-group">
       <h2 class="template-group__heading">{{ icon('book', 18) }} Built-in starters</h2>
       <p class="template-group__note">These templates are maintained by the system. You cannot edit or delete them, but you can save a copy as your own template.</p>
@@ -41,9 +43,10 @@
       </div>
     </div>
 
-    <!-- Saved templates -->
+    {# Sariling templates ng student, may Use at Delete. #}
     <div class="template-group mt-5">
       <h2 class="template-group__heading">{{ icon('file', 18) }} Your saved templates</h2>
+      {# Pag walang saved, empty state na may link sa create listing. #}
       {% if templates.items %}
         <div class="saved-template-list">
           {% for template in templates.items %}

@@ -1,3 +1,4 @@
+{#- Plain text na bersyon ng OTP email. -#}
 Verify your email - NU DentalConnect
 
 Your verification code: {{ code }}

@@ -1,3 +1,4 @@
+{#- Plain text na bersyon ng notice email. -#}
 NU DentalConnect update
 
 Hello {{ user.full_name }},

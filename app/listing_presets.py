@@ -1,9 +1,5 @@
-"""Starter values for the student appointment-listing editor.
-
-Expanded with researched dental procedures across standard clinical categories.
-All templates include placeholders that students must edit with clinic-approved details.
-"""
-
+# Starter values para sa listing editor. Placeholder yung
+# location at schedule; kailangang i-edit ng student bago publish.
 EDIT_LOCATION = "Edit - enter the approved clinic location"
 EDIT_SCHEDULE = "Edit - enter your available days and times"
 EDIT_DESCRIPTION = (
@@ -12,11 +8,12 @@ EDIT_DESCRIPTION = (
 )
 EDIT_ELIGIBILITY = "Edit this draft with eligibility confirmed by the supervising clinic."
 
-# Built-in listing templates organized by clinical category
-# Based on standard dental school clinical curricula and patient recruitment needs
+# Built-in templates, naka-grupo per clinical category. Galing
+# sa usual na procedures; editable pa rin lahat ng fields.
 BUILT_IN_LISTING_TEMPLATES = [
-    # === EXAMINATION & DIAGNOSIS ===
     {
+        # Examination at diagnosis: general exam, consultation,
+        # second opinion.
         "id": "comprehensive_exam",
         "name": "Comprehensive oral examination",
         "title": "Comprehensive oral examination",
@@ -57,8 +54,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": EDIT_ELIGIBILITY,
     },
 
-    # === PREVENTIVE CARE ===
     {
+        # Preventive care: cleaning, fluoride, sealants, deep cleaning.
         "id": "prophylaxis_adult",
         "name": "Adult prophylaxis",
         "title": "Adult dental cleaning (prophylaxis)",
@@ -119,8 +116,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Children and adolescents with newly erupted permanent molars; adults with deep fissures at caries risk.",
     },
 
-    # === RESTORATIVE ===
     {
+        # Restorative: fillings at iba pang direct repair ng ngipin.
         "id": "composite_restoration",
         "name": "Composite restoration (anterior/posterior)",
         "title": "Tooth-colored composite filling",
@@ -171,8 +168,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": EDIT_ELIGIBILITY,
     },
 
-    # === ENDODONTICS ===
     {
+        # Endodontics: root canal procedures.
         "id": "root_canal_anterior",
         "name": "Anterior root canal therapy",
         "title": "Root canal treatment — anterior tooth",
@@ -223,8 +220,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Carious exposure in vital primary or young permanent tooth with reversible pulpitis signs.",
     },
 
-    # === PROSTHODONTICS (FIXED) ===
     {
+        # Fixed prosthodontics: crowns at bridges.
         "id": "crown_pfm",
         "name": "Porcelain-fused-to-metal crown",
         "title": "PFM crown fabrication and delivery",
@@ -275,8 +272,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Posterior tooth with cuspal involvement but sufficient remaining structure for conservative restoration.",
     },
 
-    # === PROSTHODONTICS (REMOVABLE) ===
     {
+        # Removable prosthodontics: dentures at partials.
         "id": "complete_denture",
         "name": "Complete denture",
         "title": "Complete maxillary/mandibular denture",
@@ -317,8 +314,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Existing denture with fracture, poor retention, or sore spots due to ridge resorption.",
     },
 
-    # === ORAL SURGERY ===
     {
+        # Oral surgery: extractions at minor surgical procedures.
         "id": "extraction_simple",
         "name": "Simple extraction",
         "title": "Simple (non-surgical) tooth extraction",
@@ -369,8 +366,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Functional limitation from restrictive frenum (speech, feeding, orthodontic, periodontal).",
     },
 
-    # === PERIODONTICS (SURGICAL) ===
     {
+        # Surgical periodontics: gum surgery, hindi lang cleaning.
         "id": "gingivectomy",
         "name": "Gingivectomy / gingivoplasty",
         "title": "Gingivectomy or gingivoplasty",
@@ -401,8 +398,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Miller Class I-II gingival recession with esthetic/sensitivity concerns; adequate donor tissue.",
     },
 
-    # === ORTHODONTICS ===
     {
+        # Orthodontics: braces at aligner related consultations.
         "id": "ortho_consultation",
         "name": "Orthodontic consultation",
         "title": "Initial orthodontic evaluation",
@@ -463,8 +460,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Completion of active orthodontic treatment; teeth in desired position.",
     },
 
-    # === PEDIATRIC DENTISTRY ===
     {
+        # Pediatric dentistry: para sa mga bata, may guardian note.
         "id": "pedo_exam",
         "name": "Pediatric dental examination",
         "title": "Child dental examination (age 1+)",
@@ -505,8 +502,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Premature loss of primary molar/second molar with permanent successor not yet erupted.",
     },
 
-    # === IMPLANT DENTISTRY (Restorative Phase) ===
     {
+        # Implant dentistry, restorative phase lang ang kasama dito.
         "id": "implant_crown",
         "name": "Implant-supported crown",
         "title": "Single implant crown delivery",
@@ -537,8 +534,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Edentulous arch with 2+ integrated implants; patient prefers removable option with enhanced retention.",
     },
 
-    # === EMERGENCY / URGENT CARE ===
     {
+        # Emergency care: pang-pain relief at urgent cases.
         "id": "emergency_palliative",
         "name": "Emergency palliative treatment",
         "title": "Emergency pain/swelling management",
@@ -559,8 +556,8 @@ BUILT_IN_LISTING_TEMPLATES = [
         "eligibility": "Recent dental trauma (<24 hrs ideal); all ages. Splinting materials and splint removal appointments included.",
     },
 
-    # === ADDITIONAL PATIENT-FACING SERVICES ===
     {
+        # Huling grupo: X-rays, whitening, at iba pang patient service.
         "id": "radiographic_exam",
         "name": "Dental radiographs (X-rays)",
         "title": "Dental X-ray examination",
@@ -582,19 +579,21 @@ BUILT_IN_LISTING_TEMPLATES = [
     },
 ]
 
-# Every template is a student-written draft. Appending the same plain-language
-# sentence keeps the patient-facing copy honest without repeating it 60 times.
+# Isang sentence na idinadagdag sa lahat ng eligibility. Ayokong
+# ulitin yung parehong disclaimer sa bawat template.
 CLINICAL_REVIEW_NOTE = (
     "Final eligibility is decided at screening by the supervising clinician."
 )
+# Loop para siguradong may note lahat. Yung check, para hindi
+# madoble kung tumakbo ulit yung code.
 for _template in BUILT_IN_LISTING_TEMPLATES:
     if CLINICAL_REVIEW_NOTE not in _template["eligibility"]:
         _template["eligibility"] = f"{_template['eligibility']}\n\n{CLINICAL_REVIEW_NOTE}"
 
 
-
+# Ginagawang JSON-ready yung built-in at saved templates para
+# mabasa ng JS sa listing editor.
 def listing_template_data(saved_templates):
-    """Return JSON-ready built-in and student-owned templates for the editor."""
     saved = [
         {
             "id": f"saved-{template.id}",

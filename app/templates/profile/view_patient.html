@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon %}
 {% block title %}{{ patient.full_name }} — NU DentalConnect{% endblock %}
+{# Patient profile. Nakikita lang ito ng student na may contact. #}
 {% block content %}
 
 <div class="container profile-page profile-page--patient">
@@ -23,6 +24,7 @@
   </header>
 
   <div class="profile-patient-card__content{% if fields.application_message %} profile-patient-card__content--message{% endif %}">
+    {# Contact details na pinayagan ng PATIENT_VISIBLE_FIELDS. #}
     <section class="profile-patient-card__contact" aria-label="Contact details">
       <dl class="details-list">
       <div class="details-item">
@@ -38,6 +40,7 @@
       </dl>
     </section>
 
+    {# Latest na application message, kung mayroon. #}
     {% if fields.application_message %}
     <section class="profile-patient-card__message">
       <h2>Message from the patient</h2>
@@ -46,6 +49,7 @@
     {% endif %}
   </div>
 
+  {# Paliwanag kung bakit visible yung profile sa student. #}
   <footer class="profile-patient-card__notice">
     {{ icon('info', 16) }}
     <span>This profile is visible because you have an active appointment or application with this patient.</span>

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import icon, status_pill %}
 {% block title %}Patient applications — {{ listing.title }}{% endblock %}
+{# Applications ng isang listing, para sa student na may-ari. #}
 {% block content %}
 
 <div class="page-band">
@@ -22,11 +23,13 @@
 
 <section class="section section--tint applications-page">
   <div class="container container--narrow">
+    {# Paalala na application lang ito, hindi appointment. #}
     <div class="notice mb-4">
       {{ icon('info') }}
       <p><span class="notice__title">An application is not a booking.</span>Accepting tells the patient you will consider them. They still request a specific appointment time separately.</p>
     </div>
 
+    {# Bawat applicant: pangalan, contact, at message kung meron. #}
     {% for a in applications %}
     <article class="applicant">
       <div class="applicant__head">
@@ -41,6 +44,8 @@
       </div>
 
       {% if a.message %}
+        {# Jinja autoescape dito. Yung message ng patient, text lang, #}
+        {# hindi HTML, kaya walang |safe sa template. #}
         <p class="applicant__message preline">{{ a.message }}</p>
       {% else %}
         <p class="small muted">No message included with this application.</p>
@@ -48,6 +53,7 @@
 
       <div class="split d-flex flex-wrap align-items-center justify-content-between gap-3">
         <span class="small muted">Applied {{ a.created_at|local_datetime('%b %d, %Y · %I:%M %p') }}</span>
+        {# Pending lang ang may accept at reject na button. #}
         {% if a.status == 'pending' %}
           <div class="applicant__actions d-flex flex-wrap gap-2">
             {% for decision in ['accepted', 'rejected'] %}

@@ -1,3 +1,5 @@
+# Dito naka-define lahat ng table. Isa-isa ko ginawa yung class
+# para malinaw kung saan nakaimbak yung data ng app.
 from datetime import datetime, timezone
 from sqlalchemy import Index
 from itsdangerous import URLSafeTimedSerializer
@@ -7,10 +9,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .extensions import db, login_manager
 
 
+# Helper sa oras. UTC ang sinasave ko sa database, tapos
+# tinatanggal ko yung tzinfo para plain DateTime ang column.
 def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+# Class ng User. Nandito na yung password at approval methods
+# para hindi nagkakalat sa routes (encapsulation).
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
@@ -21,11 +27,8 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(30))
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     email_verified = db.Column(db.Boolean, nullable=False, default=False)
-    # Stored as VARCHAR (not a MySQL ENUM) so pending/approved can grow without a
-    # schema change; values are validated in Python by StudentApprovalService.
-    # New rows start pending. Patients and admins are unaffected because
-    # is_approved() only gates students. Existing accounts were backfilled as
-    # approved by migration 6848c391232f.
+    # VARCHAR ito hindi ENUM para madaling magdagdag ng status.
+    # Default pending; patients at admin hindi naman hinihintay.
     approval_status = db.Column(db.String(20), nullable=False, default="pending", server_default="pending")
     auth_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
@@ -33,39 +36,53 @@ class User(UserMixin, db.Model):
     student_profile = db.relationship("DentistryStudent", back_populates="user", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
     notifications = db.relationship("Notification", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
 
+    # Students lang ang naka-gate sa admin approval.
+    # Patients at admin, laging true.
     def is_approved(self) -> bool:
-        """Check if user account is approved (for students) or always true for patients/admins."""
         if self.role == "student":
             return self.approval_status == "approved"
         return True
 
-    # Encapsulated state changes. Routes call these instead of assigning columns.
+    # Tinatawag pag nag-register ang student. Pending muna siya
+    # kahit ma-verify pa yung email.
     def require_admin_approval(self):
         if self.role != "student":
             raise ValueError("Only student accounts require approval.")
         self.approval_status = "pending"
 
+    # Dito yung totoong approval. Student lang puwede, kaya may
+    # check bago baguhin yung status.
     def approve(self):
         if self.role != "student":
             raise ValueError("Only student accounts can be approved.")
         self.approval_status = "approved"
 
+    # Deactivate hindi delete, para may record pa rin. Tapos
+    # tinaasan ko auth_version para mawala agad yung session.
     def deactivate(self):
         self.is_active = False
         self.auth_version += 1
 
+    # Hash muna bago i-save. Di ko dapat i-store yung plain password.
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
+    # Kinukumpara yung tinype na password sa hash, hindi sa plain text.
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    # Isinasama ko yung auth_version sa session id. Pag nagbago
+    # yung version, expired na agad yung lumang session.
     def get_id(self):
         return f"{self.id}:{self.auth_version}"
 
+    # Signed token para sa reset link. Nakalakip yung email at
+    # may salt para hindi magamit sa ibang purpose.
     def get_reset_token(self):
         return URLSafeTimedSerializer(current_app.config["SECRET_KEY"]).dumps(self.email, salt="password-reset")
 
+    # Pag sira, expired, o sobra na sa max_age yung token, None
+    # ang sagot. Hindi ko pinapakita kung bakit sira.
     @staticmethod
     def verify_reset_token(token, max_age=1800):
         try:
@@ -75,6 +92,8 @@ class User(UserMixin, db.Model):
         return db.session.scalar(db.select(User).where(User.email == email))
 
 
+# Patient profile. Yung shared fields tulad ng name at email
+# nasa User, dito lang yung avatar.
 class Patient(db.Model):
     __tablename__ = "patients"
     id = db.Column(db.Integer, primary_key=True)
@@ -83,6 +102,8 @@ class Patient(db.Model):
     user = db.relationship("User", back_populates="patient_profile")
 
 
+# Student profile. Dito yung year level, campus, at bio na
+# hindi kailangan ng patient.
 class DentistryStudent(db.Model):
     __tablename__ = "dentistry_students"
     id = db.Column(db.Integer, primary_key=True)
@@ -96,6 +117,8 @@ class DentistryStudent(db.Model):
     listings = db.relationship("RecruitmentListing", back_populates="student", cascade="all, delete-orphan", passive_deletes=True)
 
 
+# Listing na pinopost ng student. draft, published, closed
+# ang status; yung submission_key pang-iwas sa double submit.
 class RecruitmentListing(db.Model):
     __tablename__ = "recruitment_listings"
     id = db.Column(db.Integer, primary_key=True)
@@ -114,6 +137,8 @@ class RecruitmentListing(db.Model):
     applications = db.relationship("PatientApplication", back_populates="listing", cascade="all, delete-orphan", passive_deletes=True)
 
 
+# Saved template ng student para hindi na ulitin yung fields
+# tuwing gagawa ng bagong listing.
 class StudentListingTemplate(db.Model):
     __tablename__ = "student_listing_templates"
     id = db.Column(db.Integer, primary_key=True)
@@ -129,6 +154,7 @@ class StudentListingTemplate(db.Model):
     student = db.relationship("DentistryStudent")
 
 
+# Application ng patient sa isang listing. Hindi ito booking.
 class PatientApplication(db.Model):
     __tablename__ = "patient_applications"
     id = db.Column(db.Integer, primary_key=True)
@@ -139,9 +165,13 @@ class PatientApplication(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     listing = db.relationship("RecruitmentListing", back_populates="applications")
     patient = db.relationship("Patient")
+    # Isang application lang per patient per listing. Pag naulit,
+    # IntegrityError sa route, tapos sasabihin ko na may existing na.
     __table_args__ = (db.UniqueConstraint("listing_id", "patient_id", name="uq_application_patient_listing"),)
 
 
+# Appointment record. Isang patient at isang student per row.
+# UTC lahat ng oras dito, Manila time lang sa display.
 class Appointment(db.Model):
     __tablename__ = "appointments"
     id = db.Column(db.Integer, primary_key=True)
@@ -158,10 +188,14 @@ class Appointment(db.Model):
     student = db.relationship("DentistryStudent")
     listing = db.relationship("RecruitmentListing")
 
+    # Puwede pa i-cancel kung hindi pa tapos at wala pang
+    # nakalipas na oras yung appointment.
     def can_cancel(self):
         return self.status in {"pending", "confirmed", "reschedule_requested"} and self.starts_at > utcnow()
 
 
+# Simpleng in-app notification. read_at lang ang nagsasabi
+# kung nabasa na.
 class Notification(db.Model):
     __tablename__ = "notifications"
     id = db.Column(db.Integer, primary_key=True)
@@ -172,6 +206,8 @@ class Notification(db.Model):
     user = db.relationship("User", back_populates="notifications")
 
 
+# OTP challenge para sa email verification. Naka-hash yung
+# code, may expiry, consumed_at, at bilang ng attempts.
 class OTPVerification(db.Model):
     __tablename__ = "otp_verifications"
     id = db.Column(db.Integer, primary_key=True)
@@ -186,6 +222,8 @@ class OTPVerification(db.Model):
     __table_args__ = (Index("ix_otp_user_created", "user_id", "created_at"),)
 
 
+# Audit trail. Bawat action may actor, IP, device details, at
+# JSON na details. Wala dapat password o OTP dito.
 class AuditLog(db.Model):
     __tablename__ = "audit_logs"
     id = db.Column(db.Integer, primary_key=True)
@@ -201,11 +239,16 @@ class AuditLog(db.Model):
 
     __table_args__ = (Index("ix_audit_logs_created_id", "created_at", "id"),)
 
+    # Hindi ako nag-iimbak ng object, ID lang. Kukunin ko na lang
+    # dito pag kailangan, at None kung na-delete na yung user.
     @property
     def actor(self):
         return db.session.get(User, self.actor_user_id) if self.actor_user_id else None
 
 
+# Bawat request, dito kinukuha ni Flask-Login yung user.
+# Dito rin naka-check kung active, verified, approved, at
+# tugma pa yung auth_version.
 @login_manager.user_loader
 def load_user(user_id):
     try:
@@ -215,6 +258,4 @@ def load_user(user_id):
     except (AttributeError, ValueError):
         return None
     return user if user and user.is_active and user.email_verified and user.is_approved() and user.auth_version == expected_version else None
-
-
 

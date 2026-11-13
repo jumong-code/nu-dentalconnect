@@ -1,3 +1,5 @@
+# Student blueprint. CRUD ng listing, templates, at pang-sagot
+# sa applications at appointments.
 import secrets
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -14,11 +16,14 @@ from ..upload import upload_listing_cover, get_upload_root, MAX_LISTING_IMAGE_SI
 bp = Blueprint("student", __name__)
 
 
+# Role guard para sa lahat ng student route.
 def student_required():
     if current_user.role != "student":
         abort(403)
 
 
+# Pag hindi kanya yung listing, 403. Dito nakalagay yung
+# ownership check kaya hindi na paulit-ulit.
 def owned_listing(listing_id):
     listing = db.get_or_404(RecruitmentListing, listing_id)
     if listing.student_id != current_user.student_profile.id:
@@ -26,12 +31,15 @@ def owned_listing(listing_id):
     return listing
 
 
+# Templates ng naka-login na student lang ang kinukuha ko.
 def owned_listing_templates():
     return StudentListingTemplate.query.filter_by(
         student_id=current_user.student_profile.id
     ).order_by(StudentListingTemplate.name.asc(), StudentListingTemplate.id.asc()).limit(100).all()
 
 
+# Isang renderer para sa create at edit, para pareho yung
+# template at data na pinapasa.
 def render_listing_form(form, title, listing=None):
     saved_templates = owned_listing_templates()
     return render_template(
@@ -44,6 +52,8 @@ def render_listing_form(form, title, listing=None):
     )
 
 
+# Save as template, hindi listing. Kaya may flash na
+# nagsasabing hindi pa naka-save yung listing.
 def save_listing_template(form, title, listing=None):
     name = (form.template_name.data or "").strip()
     if not name:
@@ -70,15 +80,20 @@ def save_listing_template(form, title, listing=None):
     return render_listing_form(form, title, listing)
 
 
+# Gawa ng listing. Yung submission_key ang humaharang sa
+# doble submit galing sa double click.
 @bp.route("/listings/new", methods=["GET", "POST"])
 @login_required
 def create_listing():
     student_required()
     form = ListingForm()
     if request.method == "GET":
+        # Bagong random key kada GET, para isang POST lang ang
+        # makakagawa ng listing.
         form.submission_key.data = secrets.token_urlsafe(32)
-        # Pre-fill from template if specified in query parameter
         template_id = request.args.get("template", "").strip()
+        # Puwedeng mag-prefill galing sa built-in o saved template,
+        # pero editable pa rin bago i-save.
         if template_id:
             template_data = None
             if template_id in [t["id"] for t in BUILT_IN_LISTING_TEMPLATES]:
@@ -108,6 +123,8 @@ def create_listing():
     if form.validate_on_submit():
         if "save_listing_template" in request.form:
             return save_listing_template(form, "Post an appointment listing")
+        # May listing na may parehong key, ibig sabihin na-submit na
+        # ito dati. I-redirect ko na lang sa edit page.
         existing = db.session.scalar(db.select(RecruitmentListing).where(RecruitmentListing.submission_key == form.submission_key.data, RecruitmentListing.student_id == current_user.student_profile.id))
         if existing:
             return redirect(url_for("student.edit_listing", listing_id=existing.id))
@@ -116,7 +133,8 @@ def create_listing():
         db.session.flush()
         audit_logger.listing_created(actor=current_user, listing_id=listing.id, status=listing.status)
 
-        # Handle cover image upload if provided
+        # Cover optional. Pag invalid yung image, balik sa form na
+        # may error, hindi ko muna isasave yung listing.
         if "cover" in request.files:
             file = request.files["cover"]
             if file and file.filename:
@@ -140,6 +158,8 @@ def create_listing():
     return render_listing_form(form, "Post an appointment listing")
 
 
+# Edit ng listing. Bagong submission_key din kada GET para
+# hindi magamit ulit yung lumang form.
 @bp.route("/listings/<int:listing_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_listing(listing_id):
@@ -153,13 +173,14 @@ def edit_listing(listing_id):
             return save_listing_template(form, "Edit appointment listing", listing)
         for field in ("title", "category", "location", "preferred_schedule", "description", "eligibility"):
             setattr(listing, field, getattr(form, field).data)
+        # Closed na listing, hindi na puwedeng i-publish ulit.
+        # Kailangan gumawa ng bago.
         if form.publish_now.data and listing.status == "closed":
             flash("Closed listings cannot be published again. Create a new listing.", "error")
             return render_listing_form(form, "Edit appointment listing", listing)
         if form.publish_now.data:
             listing.status = "published"
 
-        # Handle cover image upload if provided
         if "cover" in request.files:
             file = request.files["cover"]
             if file and file.filename:
@@ -178,17 +199,19 @@ def edit_listing(listing_id):
     return render_listing_form(form, "Edit appointment listing", listing)
 
 
+# Saved templates, may pagination, plus yung built-in na
+# hindi naeedit ng student.
 @bp.route("/listing-templates")
 @login_required
 def listing_templates():
     student_required()
-    # Get saved templates with pagination
     saved_templates = StudentListingTemplate.query.filter_by(student_id=current_user.student_profile.id).order_by(StudentListingTemplate.name.asc(), StudentListingTemplate.id.asc()).paginate(page=request.args.get("page", 1, type=int), per_page=20, max_per_page=20, error_out=False)
-    # Get built-in templates
     built_in = BUILT_IN_LISTING_TEMPLATES
     return render_template("student/listing_templates.html", templates=saved_templates, built_in=built_in)
 
 
+# Bura ng template. Sariling template lang, at hindi ito
+# umaapekto sa mga listing na nagamit na.
 @bp.route("/listing-templates/<int:template_id>/delete", methods=["POST"])
 @login_required
 def delete_listing_template(template_id):
@@ -203,6 +226,8 @@ def delete_listing_template(template_id):
     return redirect(url_for("student.listing_templates"))
 
 
+# Status change na may allowed transitions. Kung wala sa
+# listahan, 400, para hindi makalundag sa invalid state.
 @bp.route("/listings/<int:listing_id>/status/<status>", methods=["POST"])
 @login_required
 def listing_status(listing_id, status):
@@ -218,15 +243,18 @@ def listing_status(listing_id, status):
     return redirect(url_for("main.dashboard"))
 
 
+# Bura ng listing. Pag may future confirmed appointment,
+# kailangan muna ng explicit na confirmation.
 @bp.route("/listings/<int:listing_id>/delete", methods=["POST"])
 @login_required
 def delete_listing(listing_id):
     student_required()
     listing = owned_listing(listing_id)
 
-    # Closed listings can be removed without any extra appointment handling.
     future_confirmed = 0
     if listing.status != "closed":
+        # Bilangin muna yung confirmed sa hinaharap. Closed listing,
+        # wala nang aalalahanin.
         future_confirmed = db.session.scalar(
             db.select(db.func.count(Appointment.id)).where(
                 Appointment.listing_id == listing.id,
@@ -236,12 +264,14 @@ def delete_listing(listing_id):
         )
 
     confirm = request.form.get("confirm") == "true"
+    # Walang checkbox, hindi ko tutuloy yung delete.
     if future_confirmed and not confirm:
         flash(f"This listing has {future_confirmed} confirmed future appointment(s). Check the confirmation box to proceed with deletion.", "error")
         return redirect(url_for("main.dashboard"))
 
-    # Notify affected patients
     if future_confirmed:
+        # Bago burahin yung listing, i-cancel at i-notify yung mga
+        # patient na may confirmed na appointment.
         appointments = db.session.scalars(
             db.select(Appointment).where(
                 Appointment.listing_id == listing.id,
@@ -261,7 +291,6 @@ def delete_listing(listing_id):
                 except Exception:
                     pass
 
-    # Collect cover image filename
     cover_filename = listing.cover_image
 
     application_count = db.session.scalar(db.select(db.func.count(PatientApplication.id)).where(PatientApplication.listing_id == listing.id)) or 0
@@ -276,7 +305,6 @@ def delete_listing(listing_id):
     db.session.delete(listing)
     db.session.commit()
 
-    # Delete cover image file after commit
     if cover_filename:
         try:
             from ..upload import get_upload_root
@@ -290,6 +318,8 @@ def delete_listing(listing_id):
     return redirect(url_for("main.dashboard"))
 
 
+# Accept o reject ng application. Pending lang ang puwedeng
+# desisyunan, tapos notify at email yung patient.
 @bp.route("/applications/<int:application_id>/<decision>", methods=["POST"])
 @login_required
 def application_decision(application_id, decision):
@@ -308,6 +338,8 @@ def application_decision(application_id, decision):
     return redirect(url_for("student.listing_applications", listing_id=application.listing_id))
 
 
+# Applications ng isang listing. Paginated para hindi
+# mabigat kung marami.
 @bp.route("/listings/<int:listing_id>/applications")
 @login_required
 def listing_applications(listing_id):
@@ -317,10 +349,10 @@ def listing_applications(listing_id):
     return render_template("student/applications.html", listing=listing, applications=applications)
 
 
+# Lahat ng applications sa lahat ng listing ng student.
 @bp.route("/applications")
 @login_required
 def applications():
-    """Show applications across all listings owned by the signed-in student."""
     student_required()
     applications_page = PatientApplication.query.join(RecruitmentListing).options(
         joinedload(PatientApplication.patient).joinedload(Patient.user),
@@ -335,6 +367,8 @@ def applications():
     return render_template("student/applications_all.html", applications=applications_page)
 
 
+# Kunin yung appointment tapos check kung sa kanya.
+# 404 kung wala, 403 kung hindi kanya.
 def owned_appointment(appointment_id):
     appointment = db.session.scalar(db.select(Appointment).options(joinedload(Appointment.patient).joinedload(Patient.user), joinedload(Appointment.listing)).where(Appointment.id == appointment_id))
     if appointment is None:
@@ -344,10 +378,11 @@ def owned_appointment(appointment_id):
     return appointment
 
 
+# Bura ng appointment record. Kahit anong status, kanya
+# yung listing, kaya puwede niyang tanggalin.
 @bp.route("/appointments/<int:appointment_id>/delete", methods=["POST"])
 @login_required
 def delete_appointment(appointment_id):
-    """Let the owning student remove any appointment record."""
     student_required()
     appointment = owned_appointment(appointment_id)
     title = appointment.listing.title if appointment.listing else "your appointment"
@@ -369,10 +404,10 @@ def delete_appointment(appointment_id):
     return redirect(url_for("student.appointments"))
 
 
+# Cancel lang ng upcoming. Yung can_cancel() ang boundary.
 @bp.route("/appointments/<int:appointment_id>/cancel", methods=["POST"])
 @login_required
 def cancel_appointment(appointment_id):
-    """Cancel one upcoming appointment belonging to this student."""
     student_required()
     appointment = owned_appointment(appointment_id)
     if not appointment.can_cancel():
@@ -399,6 +434,7 @@ def cancel_appointment(appointment_id):
     return redirect(url_for("student.appointments"))
 
 
+# Lahat ng appointments ng student, may pagination.
 @bp.route("/appointments")
 @login_required
 def appointments():
@@ -412,6 +448,8 @@ def appointments():
     return render_template("student/appointments.html", appointments=page, now_utc=utcnow())
 
 
+# Tatlong decision: confirm, reject, complete. Bawat isa
+# may status check bago magbago.
 @bp.route("/appointments/<int:appointment_id>/<decision>", methods=["POST"])
 @login_required
 def appointment_decision(appointment_id, decision):
@@ -420,6 +458,8 @@ def appointment_decision(appointment_id, decision):
     if decision == "confirm":
         if appointment.status not in {"pending", "reschedule_requested"}:
             abort(400)
+        # Kung may proposed time, yun ang gagamitin; kundi yung
+        # orihinal. Conflict check pa rin bago i-confirm.
         appointment.starts_at = appointment.proposed_at or appointment.starts_at
         if not confirm_appointment(appointment):
             db.session.rollback()
@@ -434,6 +474,7 @@ def appointment_decision(appointment_id, decision):
         appointment.status = "rejected"
         audit_logger.appointment_rejected(actor=current_user, appointment_id=appointment.id)
         message = "Your appointment request was declined."
+    # Completed lang kung confirmed at tapos na yung oras.
     elif decision == "complete":
         if appointment.status != "confirmed" or appointment.starts_at > utcnow():
             abort(400)
@@ -449,6 +490,8 @@ def appointment_decision(appointment_id, decision):
     return redirect(url_for("main.dashboard"))
 
 
+# Bagong oras mula sa student. Oras pa rin ang unang
+# check bago maipadala sa patient.
 @bp.route("/appointments/<int:appointment_id>/propose", methods=["POST"])
 @login_required
 def propose_schedule(appointment_id):
@@ -467,10 +510,10 @@ def propose_schedule(appointment_id):
     return redirect(url_for("main.dashboard"))
 
 
+# Upload ng cover mula sa edit page.
 @bp.route("/listings/<int:listing_id>/cover", methods=["POST"])
 @login_required
 def upload_cover(listing_id):
-    """Upload cover image for a listing."""
     student_required()
     listing = owned_listing(listing_id)
 
@@ -496,10 +539,11 @@ def upload_cover(listing_id):
     return redirect(url_for("student.edit_listing", listing_id=listing.id))
 
 
+# Tanggal ng cover. Yung file sa disk, binubura pagkatapos
+# ng commit.
 @bp.route("/listings/<int:listing_id>/cover/remove", methods=["POST"])
 @login_required
 def remove_cover(listing_id):
-    """Remove cover image for a listing."""
     student_required()
     listing = owned_listing(listing_id)
 

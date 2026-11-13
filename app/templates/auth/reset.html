@@ -2,6 +2,7 @@
 {% from '_macros.html' import password_field %}
 {% from '_macros.html' import icon %}
 {% block title %}Choose password — NU DentalConnect{% endblock %}
+{# Reset password form, galing sa link na may token. #}
 {% block content %}
 <section class="auth-shell">
   <aside class="auth-aside">
@@ -26,6 +27,7 @@
         <p>Use at least 12 characters, including uppercase, lowercase, and a number. Avoid passwords you use elsewhere.</p>
       </div>
 
+      {# Bagong password at confirm. Kailangan 12 characters pataas. #}
       <form method="post">
         {{ form.hidden_tag() }}
         <div class="field">

@@ -1,10 +1,5 @@
-"""
-Audit logging service for NU DentalConnect.
-
-Centralizes all audit event creation with single-purpose methods.
-Ensures consistent formatting, Manila timezone display, and device identification.
-No raw secrets, OTPs, passwords, or tokens are ever stored.
-"""
+# Audit logging. Nandito lahat ng event na gusto kong maitala,
+# isang method kada action para pareho palagi ang format.
 import hashlib
 import re
 from datetime import datetime, timezone
@@ -18,20 +13,22 @@ from .models import AuditLog, User, utcnow
 from .time_utils import MANILA_TZ
 
 
-# Device ID cookie name
+# Name at tagal ng device cookie. Isang taon bago mawala.
 DEVICE_ID_COOKIE = "dc_device_id"
-DEVICE_ID_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
+DEVICE_ID_MAX_AGE = 365 * 24 * 60 * 60
 
 
+# Kinukuha yung browser at OS galing sa User-Agent, tapos may
+# sarili tayong cookie para makilala yung parehong device.
 class DeviceInfo:
-    """Parses User-Agent and manages first-party device identification cookie."""
 
+    # Cache ng na-parse nang UA. Madalas paulit-ulit yung parehong
+    # user agent, sayang kung i-parse ulit.
     _ua_cache = {}
 
+    # Kunin sa request context, o sa pinasang request object.
     @classmethod
     def from_request(cls, request_obj=None) -> "DeviceInfo":
-        """Create DeviceInfo from current request context or passed request object."""
-        # Use passed request object if provided, otherwise fall back to global request
         if request_obj is not None:
             ua_string = request_obj.user_agent.string if request_obj.user_agent else ""
             device_id = request_obj.cookies.get(DEVICE_ID_COOKIE) if hasattr(request_obj, 'cookies') else None
@@ -41,18 +38,17 @@ class DeviceInfo:
         else:
             return cls("unknown", "unknown", "unknown", None)
 
-        # Parse User-Agent for browser/OS/device-type label
         browser, os, device_type = cls._parse_ua(ua_string)
 
         return cls(browser, os, device_type, device_id)
 
+    # Naka-base sa is_mobile at is_tablet yung label. Pag error,
+    # unknown na lang, hindi ko papabagsakin yung request.
     @classmethod
     def _parse_ua(cls, ua_string: str) -> tuple[str, str, str]:
-        """Parse User-Agent string into browser, OS, device-type."""
         if not ua_string:
             return "unknown", "unknown", "unknown"
 
-        # Simple cache for repeated UAs
         if ua_string in cls._ua_cache:
             return cls._ua_cache[ua_string]
 
@@ -67,18 +63,21 @@ class DeviceInfo:
         cls._ua_cache[ua_string] = (browser, os, device_type)
         return browser, os, device_type
 
+    # Hinahati ko yung haba ng bawat field para hindi lumampas
+    # sa column size sa database.
     def __init__(self, browser: str, os: str, device_type: str, device_id: Optional[str]):
         self.browser = browser[:100]
         self.os = os[:100]
         self.device_type = device_type[:20]
         self.device_id = device_id
 
+    # Text na ipinapakita sa admin audit table.
     def to_label(self) -> str:
-        """Human-readable device label for audit display."""
         return f"{self.browser} / {self.os} / {self.device_type}"
 
+    # Details para sa JSON column. Hash lang ang device id,
+    # hindi yung raw value na nasa browser.
     def to_details(self) -> dict:
-        """Structured details for audit JSON column (hashed device ID only)."""
         return {
             "label": self.to_label(),
             "browser": self.browser,
@@ -87,19 +86,21 @@ class DeviceInfo:
             "device_id_hash": self._hash_device_id(self.device_id) if self.device_id else None,
         }
 
+    # Truncated SHA-256. Sapat para makilala yung parehong device,
+    # pero hindi na mababalik sa original.
     @staticmethod
     def _hash_device_id(device_id: str) -> str:
-        """Hash device ID for storage (never store raw)."""
         return hashlib.sha256(device_id.encode()).hexdigest()[:16]
 
+    # Random at URL-safe. Ito yung ilalagay sa cookie.
     @staticmethod
     def generate_device_id() -> str:
-        """Generate a new random device ID."""
         import secrets
         return secrets.token_urlsafe(32)
 
+    # HttpOnly para hindi mabasa ng JavaScript. Lax yung
+    # same-site para gumana pa rin sa normal na navigation.
     def set_cookie(self, response, secure: bool = False) -> None:
-        """Set the HttpOnly first-party device ID cookie when the request has none."""
         if self.device_id is None:
             new_id = self.generate_device_id()
             response.set_cookie(
@@ -113,23 +114,10 @@ class DeviceInfo:
             )
 
 
+# Isang class para sa lahat ng audit event. Nasa _add_log
+# yung common na gawain para hindi paulit-ulit.
 class AuditLogger:
-    """
-    Single-purpose audit logging methods.
 
-    All methods create an AuditLog row with consistent structure:
-    - actor_user_id (FK, SET NULL on user delete)
-    - actor_email (snapshot, never null)
-    - action (standardized verb)
-    - entity_type / entity_id
-    - details (JSON, no secrets)
-    - ip_address, user_agent, device_info
-    - created_at (UTC, displayed in Manila via template filter)
-
-    Failed-login and other non-transactional events commit immediately.
-    """
-
-    # Standardized action verbs
     ACTION_LOGIN_SUCCESS = "login_success"
     ACTION_LOGIN_FAILURE = "login_failure"
     ACTION_LOGIN_LOCKOUT = "login_lockout"
@@ -177,12 +165,14 @@ class AuditLogger:
     ACTION_STUDENT_APPROVED = "student_approved"
     ACTION_STUDENT_REJECTED = "student_rejected"
 
+    # Wala pang laman sa simula. Hindi pa ito nagagamit sa
+    # ibang method.
     def __init__(self):
         self._device_info = None
 
+    # Tatanggapin ko yung actor, user, o viewer na parameter para
+    # hindi na kailangan baguhin yung mga lumang tawag sa routes.
     def _get_actor_info(self, actor: Optional[User] = None, user: Optional[User] = None, viewer: Optional[User] = None) -> tuple[Optional[int], str]:
-        """Extract actor_user_id and actor_email from various parameter names."""
-        # Support multiple parameter names for backward compatibility
         actual_actor = actor or user or viewer
         if actual_actor is not None:
             return actual_actor.id, actual_actor.email[:255]
@@ -192,27 +182,29 @@ class AuditLogger:
                 return current_user.id, current_user.email[:255]
         return None, "system"
 
+    # IP at user agent galing sa request. Pag walang request,
+    # unknown device na lang ang ibabalik.
     def _get_request_context(self, device: Optional[DeviceInfo] = None) -> tuple[Optional[str], Optional[str], DeviceInfo]:
-        """Extract IP, User-Agent, and DeviceInfo from request."""
         if not has_request_context():
             return None, None, device or DeviceInfo("unknown", "unknown", "unknown", None)
 
         ip = request.remote_addr
         ua = request.user_agent.string[:300] if request.user_agent.string else None
-        # Use passed device or create new one from current request
         dev = device or DeviceInfo.from_request()
         return ip, ua, dev
 
+    # Kapag pumalya yung commit, rollback at log lang. Hindi ko
+    # papabagsakin yung main flow dahil sa audit.
     def _commit_now(self) -> None:
-        """Immediate commit for non-transactional events (e.g., failed login)."""
         try:
             db.session.commit()
         except Exception:
             db.session.rollback()
-            # Log but don't raise - audit must not break the main flow
             import logging
             logging.getLogger(__name__).exception("Audit commit failed")
 
+    # Dito dumadaan lahat. Pinipiga ko yung haba ng fields para
+    # hindi lumampas sa column, tapos dinadagdag ko yung device.
     def _add_log(
         self,
         action: str,
@@ -226,12 +218,10 @@ class AuditLogger:
         commit_now: bool = False,
         **extra_details
     ) -> AuditLog:
-        """Internal: create and add AuditLog row."""
         actor_id, actor_email = self._get_actor_info(actor, user, viewer)
         ip, ua, dev = self._get_request_context(device)
 
         log_details = details or {}
-        # Merge any extra details passed as kwargs
         log_details.update(extra_details)
         log_details["device"] = dev.to_details()
 
@@ -252,16 +242,16 @@ class AuditLogger:
 
         return log
 
-    # ========== Auth events ==========
 
+    # Kung sino yung nag-login, at kung galing sa remember
+    # checkbox yung session.
     def login_success(self, user: User = None, actor: User = None, device: DeviceInfo = None, remember: bool = False, **kwargs) -> AuditLog:
-        """Successful login."""
         u = user or actor
         return self._add_log(self.ACTION_LOGIN_SUCCESS, "user", str(u.id) if u else None, {"remember": remember}, actor=u, device=device)
 
+    # Hindi dapat malaman ng anonymous kung may account sa email
+    # na yun, kaya generic ang sagot at dito lang yung reason.
     def login_failure(self, email: str = None, device: DeviceInfo = None, reason: str = "invalid_credentials", **kwargs) -> AuditLog:
-        """Failed login - NEVER reveals whether account exists."""
-        # Use a generic email snapshot that doesn't leak existence
         display_email = email[:255] if email else "unknown"
         return self._add_log(
             self.ACTION_LOGIN_FAILURE,
@@ -269,11 +259,12 @@ class AuditLogger:
             None,
             {"reason": reason, "email": display_email},
             device=device,
-            commit_now=True,  # Non-transactional
+            commit_now=True,
         )
 
+    # Sunod-sunod na maling password. Naka-commit agad kasi
+    # kailangan maitala kahit mag-error pa yung request.
     def login_lockout(self, email: str) -> AuditLog:
-        """Account lockout due to failed attempts."""
         return self._add_log(
             self.ACTION_LOGIN_LOCKOUT,
             "user",
@@ -282,34 +273,34 @@ class AuditLogger:
             commit_now=True,
         )
 
+    # Pag sign out, naka-record din para may trail ng session.
     def logout(self, user: User = None, actor: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """User logout."""
         u = user or actor
         return self._add_log(self.ACTION_LOGOUT, "user", str(u.id) if u else None, actor=u, device=device)
 
+    # Bagong account, kasama yung role at kung successful.
     def account_registered(self, user: User = None, actor: User = None, role: str = None, device: DeviceInfo = None, success: bool = True, **kwargs) -> AuditLog:
-        """New account registration."""
         u = user or actor
         return self._add_log(self.ACTION_REGISTER, "user", str(u.id) if u else None, {"role": role, "success": success}, actor=u, device=device)
 
-    # ========== OTP events ==========
 
+    # Nagpadala ng OTP email. purpose ang nagsasabi kung
+    # verification o iba.
     def otp_sent(self, user: User = None, actor: User = None, purpose: str = "verification", device: DeviceInfo = None, trigger: str = None, **kwargs) -> AuditLog:
-        """OTP email sent."""
         u = user or actor
         details = {"purpose": purpose}
         if trigger:
             details["trigger"] = trigger
         return self._add_log(self.ACTION_OTP_SENT, "user", str(u.id) if u else None, details, actor=u, device=device)
 
+    # Tama yung code at nagamit na.
     def otp_verified(self, user: User = None, actor: User = None, method: str = "code", device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """OTP successfully verified."""
         u = user or actor
         return self._add_log(self.ACTION_OTP_VERIFIED, "user", str(u.id) if u else None, {"method": method}, actor=u, device=device)
 
+    # Maling o expired na code. Sinusuportahan yung dalawang
+    # style ng tawag: may user, o email lang.
     def otp_failed(self, email: str = None, user: User = None, actor: User = None, device: DeviceInfo = None, reason: str = "invalid_code", **kwargs) -> AuditLog:
-        """OTP verification failed."""
-        # Support both calling patterns: otp_failed(user=..., reason=...) and otp_failed(email=..., reason=...)
         u = user or actor
         if u is not None:
             entity_id = str(u.id)
@@ -327,30 +318,31 @@ class AuditLogger:
             commit_now=True,
         )
 
+    # Bagong code pag na-expire o hindi dumating yung una.
     def otp_resent(self, user: User = None, actor: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """OTP resent."""
         u = user or actor
         return self._add_log(self.ACTION_OTP_RESENT, "user", str(u.id) if u else None, actor=u, device=device)
 
+    # Kapareho ng otp_verified. Mas malinaw lang pangalan
+    # para sa route ng verification.
     def email_verified(self, user: User = None, actor: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Email verification completed."""
         u = user or actor
         return self._add_log(self.ACTION_OTP_VERIFIED, "user", str(u.id) if u else None, {"method": "code"}, actor=u, device=device)
 
-    # ========== Password events ==========
 
+    # User mismo nagpalit ng password sa profile page.
     def password_changed(self, user: User = None, actor: User = None, device: DeviceInfo = None, method: str = "user_initiated", **kwargs) -> AuditLog:
-        """User changed own password."""
         u = user or actor
         return self._add_log(self.ACTION_PASSWORD_CHANGED, "user", str(u.id) if u else None, {"method": method}, actor=u, device=device)
 
+    # Na-reset via email link.
     def password_reset(self, user: User = None, actor: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Password reset via email link."""
         u = user or actor
         return self._add_log(self.ACTION_PASSWORD_RESET, "user", str(u.id) if u else None, actor=u, device=device)
 
+    # May nag-request ng reset, kasama yung kaso na wala
+    # talagang account para makita sa audit.
     def password_reset_requested(self, user: User = None, email: str = None, device: DeviceInfo = None, user_not_found: bool = False, **kwargs) -> AuditLog:
-        """Password reset requested."""
         if user is not None:
             entity_id = str(user.id)
             actor_param = user
@@ -366,8 +358,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Admin ang nag-set. Wala syempre yung password sa details.
     def password_admin_set(self, actor: User = None, target_user: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Admin set/reset another user's password."""
         return self._add_log(
             self.ACTION_PASSWORD_ADMIN_SET,
             "user",
@@ -377,40 +369,39 @@ class AuditLogger:
             device=device,
         )
 
-    # ========== Profile events ==========
 
+    # Nag-save ng profile. Listahan lang ng fields ang nakalagay.
     def profile_updated(self, actor: User = None, fields: list[str] = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Profile information updated."""
         return self._add_log(self.ACTION_PROFILE_UPDATED, "user", str(actor.id) if actor else None, {"fields": fields or []}, actor=actor, device=device)
 
+    # Bagong email, kailangan ulit i-verify.
     def email_changed(self, actor: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Email address changed (triggers re-verification)."""
         return self._add_log(self.ACTION_EMAIL_CHANGED, "user", str(actor.id) if actor else None, {"verification_required": True}, actor=actor, device=device)
 
+    # Bagong avatar na na-upload.
     def avatar_uploaded(self, actor: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Avatar image uploaded."""
         return self._add_log(self.ACTION_AVATAR_UPLOADED, "user", str(actor.id) if actor else None, actor=actor, device=device)
 
+    # Tinanggal yung avatar.
     def avatar_removed(self, actor: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Avatar image removed."""
         return self._add_log(self.ACTION_AVATAR_REMOVED, "user", str(actor.id) if actor else None, actor=actor, device=device)
 
-    # ========== Listing events ==========
 
+    # Bagong listing galing sa student, kasama yung status.
     def listing_created(self, actor: User = None, listing_id: int = None, status: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """New recruitment listing created."""
         return self._add_log(self.ACTION_LISTING_CREATED, "listing", str(listing_id) if listing_id else None, {"status": status}, actor=actor, device=device)
 
+    # In-edit yung listing, kasama yung status pagkatapos.
     def listing_updated(self, actor: User = None, listing_id: int = None, status: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Listing content updated."""
         return self._add_log(self.ACTION_LISTING_UPDATED, "listing", str(listing_id) if listing_id else None, {"status": status}, actor=actor, device=device)
 
+    # Nagpalit ng status: draft, published, o closed.
     def listing_status_changed(self, actor: User = None, listing_id: int = None, status: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Listing status transition."""
         return self._add_log(self.ACTION_LISTING_STATUS_CHANGED, "listing", str(listing_id) if listing_id else None, {"status": status}, actor=actor, device=device)
 
+    # Kasama yung bilang ng applications at appointments na
+    # naapektuhan, para may record ng cascade.
     def listing_deleted(self, actor: User = None, listing_id: int = None, title: str = None, applications_cascaded: int = 0, appointments_unlinked: int = 0, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Listing deleted (by owner or admin)."""
         return self._add_log(
             self.ACTION_LISTING_DELETED,
             "listing",
@@ -420,76 +411,72 @@ class AuditLogger:
             device=device,
         )
 
+    # Cover image ng listing.
     def cover_uploaded(self, actor: User = None, listing_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Listing cover image uploaded."""
         return self._add_log(self.ACTION_COVER_UPLOADED, "listing", str(listing_id) if listing_id else None, actor=actor, device=device)
 
+    # Tinanggal yung cover image ng listing.
     def cover_removed(self, actor: User = None, listing_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Listing cover image removed."""
         return self._add_log(self.ACTION_COVER_REMOVED, "listing", str(listing_id) if listing_id else None, actor=actor, device=device)
 
-    # ========== Template events ==========
 
+    # Saved listing template na ginawa ng student.
     def template_created(self, actor: User = None, template_id: int = None, name: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Saved listing template created."""
         return self._add_log(self.ACTION_TEMPLATE_CREATED, "listing_template", str(template_id) if template_id else None, {"name": name}, actor=actor, device=device)
 
+    # Saved template na binura.
     def template_deleted(self, actor: User = None, template_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Saved listing template deleted."""
         return self._add_log(self.ACTION_TEMPLATE_DELETED, "listing_template", str(template_id) if template_id else None, actor=actor, device=device)
 
-    # ========== Application events ==========
 
+    # Patient nag-apply sa isang listing.
     def application_created(self, actor: User = None, application_id: int = None, listing_id: int = None, listing_title: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Patient application submitted."""
         return self._add_log(self.ACTION_APPLICATION_CREATED, "application", str(application_id) if application_id else None, {"listing_id": listing_id, "listing_title": listing_title}, actor=actor, device=device)
 
+    # Accept o reject yung application.
     def application_decision(self, actor: User = None, application_id: int = None, decision: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Application accepted/rejected."""
         return self._add_log(self.ACTION_APPLICATION_DECISION, "application", str(application_id) if application_id else None, {"status": decision}, actor=actor, device=device)
 
+    # Patient nag-withdraw ng application.
     def application_withdrawn(self, actor: User = None, application_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Patient withdrew application."""
         return self._add_log(self.ACTION_APPLICATION_WITHDRAWN, "application", str(application_id) if application_id else None, actor=actor, device=device)
 
-    # ========== Appointment events ==========
 
+    # Bagong request, kasama yung listing at oras.
     def appointment_requested(self, actor: User = None, appointment_id: int = None, listing_id: int = None, listing_title: str = None, starts_at: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Patient requested appointment."""
         return self._add_log(self.ACTION_APPOINTMENT_REQUESTED, "appointment", str(appointment_id) if appointment_id else None, {"listing_id": listing_id, "listing_title": listing_title, "starts_at": starts_at}, actor=actor, device=device)
 
+    # Kinansela yung appointment, student o patient man.
     def appointment_cancelled(self, actor: User = None, appointment_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Appointment cancelled."""
         return self._add_log(self.ACTION_APPOINTMENT_CANCELLED, "appointment", str(appointment_id) if appointment_id else None, actor=actor, device=device)
 
+    # Patient humingi ng bagong oras.
     def appointment_rescheduled(self, actor: User = None, appointment_id: int = None, proposed_at: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Patient requested reschedule or student proposed new time."""
         return self._add_log(self.ACTION_APPOINTMENT_RESCHEDULED, "appointment", str(appointment_id) if appointment_id else None, {"proposed_at": proposed_at}, actor=actor, device=device)
 
+    # Student nag-propose ng ibang oras.
     def appointment_proposed(self, actor: User = None, appointment_id: int = None, proposed_at: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Student proposed alternative time."""
         return self._add_log(self.ACTION_APPOINTMENT_PROPOSED, "appointment", str(appointment_id) if appointment_id else None, {"proposed_at": proposed_at}, actor=actor, device=device)
 
+    # Confirm na yung slot.
     def appointment_confirmed(self, actor: User = None, appointment_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Appointment confirmed (by student or patient accepting proposal)."""
         return self._add_log(self.ACTION_APPOINTMENT_CONFIRMED, "appointment", str(appointment_id) if appointment_id else None, actor=actor, device=device)
 
+    # Tinanggihan yung request.
     def appointment_rejected(self, actor: User = None, appointment_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Appointment rejected."""
         return self._add_log(self.ACTION_APPOINTMENT_REJECTED, "appointment", str(appointment_id) if appointment_id else None, actor=actor, device=device)
 
+    # Tapos na yung appointment.
     def appointment_completed(self, actor: User = None, appointment_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Appointment marked complete."""
         return self._add_log(self.ACTION_APPOINTMENT_COMPLETED, "appointment", str(appointment_id) if appointment_id else None, actor=actor, device=device)
 
+    # Hard delete ng appointment. Hindi na ito maibabalik.
     def appointment_deleted(self, actor: User = None, appointment_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Appointment hard-deleted (patient non-confirmed, admin any)."""
         return self._add_log(self.ACTION_APPOINTMENT_DELETED, "appointment", str(appointment_id) if appointment_id else None, actor=actor, device=device)
 
-    # ========== Admin events ==========
 
+    # Admin nag-approve ng student galing sa users page.
     def admin_user_approved(self, admin: User = None, actor: User = None, student_user: User = None, target_user: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Admin approved a pending student."""
         a = admin or actor
         s = student_user or target_user
         return self._add_log(
@@ -501,8 +488,9 @@ class AuditLogger:
             device=device,
         )
 
+    # Galing sa approval queue. Ibang action name para madaling
+    # i-filter sa audit kung saan galing yung approve.
     def student_approved(self, actor: User = None, student: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Student approved by an administrator (approval-queue event)."""
         return self._add_log(
             self.ACTION_STUDENT_APPROVED,
             "user",
@@ -512,8 +500,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Student na hinarangan ng admin.
     def student_rejected(self, actor: User = None, student: User = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Student rejected by admin."""
         return self._add_log(
             self.ACTION_STUDENT_REJECTED,
             "user",
@@ -523,8 +511,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Bura ng account. Kasama yung role at email snapshot.
     def admin_user_deleted(self, admin: User = None, actor: User = None, target_user: User = None, role: str = None, email: str = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Admin deleted a user account."""
         a = admin or actor
         return self._add_log(
             self.ACTION_ADMIN_USER_DELETED,
@@ -535,8 +523,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Admin ang nagbura ng listing, hindi yung owner.
     def admin_listing_deleted(self, admin: User = None, actor: User = None, listing_id: int = None, title: str = None, applications_cascaded: int = 0, appointments_unlinked: int = 0, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Admin deleted a listing."""
         a = admin or actor
         return self._add_log(
             self.ACTION_ADMIN_LISTING_DELETED,
@@ -547,8 +535,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Admin nagbura ng appointment record.
     def admin_appointment_deleted(self, admin: User = None, actor: User = None, appointment_id: int = None, listing_id: Optional[int] = None, patient_id: int = None, student_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Admin deleted an appointment."""
         a = admin or actor
         return self._add_log(
             self.ACTION_ADMIN_APPOINTMENT_DELETED,
@@ -559,8 +547,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Admin nagsara ng listing mula sa oversight view.
     def admin_listing_closed(self, admin: User = None, actor: User = None, listing_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Admin closed a listing from the oversight view."""
         a = admin or actor
         return self._add_log(
             self.ACTION_ADMIN_LISTING_CLOSED,
@@ -571,8 +559,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Activate o deactivate ng account.
     def admin_user_toggle(self, admin: User = None, actor: User = None, target_user: User = None, is_active: bool = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Admin activated/deactivated a user."""
         a = admin or actor
         return self._add_log(
             self.ACTION_ADMIN_USER_TOGGLE,
@@ -583,8 +571,8 @@ class AuditLogger:
             device=device,
         )
 
+    # Namarkahan na read yung notification.
     def notification_read(self, actor: User = None, notification_id: int = None, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """In-app notification marked as read."""
         return self._add_log(
             self.ACTION_NOTIFICATION_READ,
             "notification",
@@ -593,10 +581,10 @@ class AuditLogger:
             device=device,
         )
 
-    # ========== Profile view (privacy boundary) ==========
 
+    # Naka-log kahit denied, para may record kung may
+    # nagtatangka tumingin ng profile na hindi puwede.
     def profile_viewed(self, viewer: User = None, target_user: User = None, allowed: bool = True, device: DeviceInfo = None, **kwargs) -> AuditLog:
-        """Profile view attempt (logs both allowed and denied for privacy audit)."""
         return self._add_log(
             self.ACTION_PROFILE_VIEWED,
             "user",
@@ -607,10 +595,10 @@ class AuditLogger:
         )
 
 
-# Singleton instance
+# Isang instance lang ito, ginagamit ng lahat ng routes.
 audit_logger = AuditLogger()
 
 
+# Shortcut para sa routes: kunin yung DeviceInfo sa request.
 def get_device_info(request_obj=None) -> DeviceInfo:
-    """Get DeviceInfo from a Flask request object or the current request context."""
     return DeviceInfo.from_request(request_obj)

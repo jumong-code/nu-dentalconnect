@@ -1,3 +1,5 @@
+# Dito ginagawa yung Flask app. Factory pattern para hindi
+# global yung app object.
 from datetime import datetime, timezone
 from flask import Flask, render_template
 from config import Config
@@ -5,9 +7,11 @@ from .extensions import csrf, db, login_manager, mail, migrate
 from .time_utils import MANILA_TZ
 
 
+# Lahat ng setup dito: config, extensions, blueprint, errors.
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    # Tawagin yung Config.validate() bago pa magsimula yung app.
     validate_config = getattr(config_class, "validate", None)
     if validate_config:
         validate_config()
@@ -16,25 +20,15 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     login_manager.login_message_category = "info"
+    # SMTP (Flask-Mail) at CSRF protection ng Flask-WTF.
     mail.init_app(app)
     csrf.init_app(app)
 
-    @app.context_processor
-    def inject_year():
-        # AUTHORIZATION_NOTICE is defined once in config.py and rendered in the
-        # footers. The About page keeps its own placeholder copy.
-        return {
-            "current_year": datetime.now(timezone.utc).astimezone(MANILA_TZ).year,
-            "authorization_notice": app.config.get("AUTHORIZATION_NOTICE", ""),
-        }
-
+    # Pagkatapos ng bawat response, chine-check kung may device
+    # cookie na. Kung wala, nilalagyan ng bago. Random value lang
+    # sa browser; sa audit, hash lang, hindi yung raw value.
     @app.after_request
     def identify_device(response):
-        """Issue the first-party device ID cookie used by the audit log.
-
-        Only a random opaque value is stored in the browser; the audit row keeps
-        a truncated SHA-256 hash, never the raw value.
-        """
         from .audit import DeviceInfo
 
         device = DeviceInfo.from_request()
@@ -42,6 +36,8 @@ def create_app(config_class=Config):
             device.set_cookie(response, secure=app.config.get("SESSION_COOKIE_SECURE", False))
         return response
 
+    # Filter para sa template. UTC yung nasa DB, Manila time
+    # yung ipinapakita sa user.
     @app.template_filter("local_datetime")
     def local_datetime(value, format_string="%b %d, %Y %I:%M %p"):
         if value is None:
@@ -50,6 +46,8 @@ def create_app(config_class=Config):
             value = value.replace(tzinfo=timezone.utc)
         return value.astimezone(MANILA_TZ).strftime(format_string)
 
+    # Security headers: nosniff, DENY sa frame, referrer policy,
+    # at HSTS pag naka-secure yung cookie.
     @app.after_request
     def set_security_headers(response):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -60,14 +58,19 @@ def create_app(config_class=Config):
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
         return response
 
+    # Nasa loob na ng function yung imports para iwas circular import.
     from . import models
     from .routes import auth, main, patient, student, admin
+    # Lima yung blueprint. Yung auth, patient, student, at admin
+    # may url_prefix para malinaw kung saan naka-mount.
     app.register_blueprint(main.bp)
     app.register_blueprint(auth.bp, url_prefix="/auth")
     app.register_blueprint(patient.bp, url_prefix="/patient")
     app.register_blueprint(student.bp, url_prefix="/student")
     app.register_blueprint(admin.bp, url_prefix="/admin")
 
+    # CLI command: flask create-admin. Yung docstring sa baba
+    # ginagamit ni Click bilang --help text, kaya hindi ko tinanggal.
     @app.cli.command("create-admin")
     def create_admin():
         """Create an administrator account interactively for the local installation."""
@@ -93,10 +96,12 @@ def create_app(config_class=Config):
         db.session.commit()
         print("Administrator created.")
 
+    # Custom error pages para hindi lumabas yung default HTML.
     @app.errorhandler(403)
     def forbidden(_error):
         return render_template("errors/403.html"), 403
 
+    # Pag 404, ito yung template na ipapakita.
     @app.errorhandler(404)
     def not_found(_error):
         return render_template("errors/404.html"), 404

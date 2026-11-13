@@ -1,3 +1,5 @@
+# Main blueprint: public pages, dashboard, profile, at
+# pag-serve ng uploads.
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for, send_file
 from flask_login import current_user, login_required, logout_user
 from sqlalchemy.orm import joinedload
@@ -19,6 +21,8 @@ from ..audit import audit_logger, get_device_info
 bp = Blueprint("main", __name__)
 
 
+# Home page. Published at approved lang ang pinapakita, tatlo
+# lang para mabilis mag-load.
 @bp.route("/")
 def index():
     listings = RecruitmentListing.query.join(DentistryStudent).join(
@@ -31,21 +35,28 @@ def index():
     return render_template("index.html", listings=listings)
 
 
+# About page. Static content lang, walang query.
 @bp.route("/about")
 def about():
     return render_template("about.html")
 
 
+# Isang route, tatlong dashboard depende sa role. Iba-iba
+# yung query, pero iisa lang yung base template.
 @bp.route("/dashboard")
 @login_required
 def dashboard():
     from ..models import Patient, DentistryStudent, Notification, utcnow
+    # Patient: appointments at applications niya, plus huling
+    # limang notifications.
     if current_user.role == "patient":
         patient = current_user.patient_profile
         appointments = Appointment.query.options(joinedload(Appointment.student).joinedload(DentistryStudent.user), joinedload(Appointment.listing)).filter_by(patient_id=patient.id).order_by(Appointment.starts_at.desc(), Appointment.id.desc()).all()
         applications = PatientApplication.query.options(joinedload(PatientApplication.listing)).filter_by(patient_id=patient.id).order_by(PatientApplication.created_at.desc()).limit(5).all()
         notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(5).all()
         return render_template("dashboard/patient.html", appointments=appointments, applications=applications, notifications=notifications, now_utc=utcnow())
+    # Student: listings, applications, at requests na kailangan
+    # sagutin. May pagination yung listings.
     if current_user.role == "student":
         student = current_user.student_profile
         listings_page = RecruitmentListing.query.filter_by(student_id=student.id).order_by(RecruitmentListing.created_at.desc(), RecruitmentListing.id.desc()).paginate(page=request.args.get("page", 1, type=int), per_page=10, max_per_page=10, error_out=False)
@@ -62,10 +73,10 @@ def dashboard():
             joinedload(Appointment.patient).joinedload(Patient.user),
             joinedload(Appointment.listing),
         )
-        # Keep every unanswered request visible regardless of how many old or
-        # completed appointments the student has accumulated.
         appointments = Appointment.query.options(*appointment_options).filter(
             Appointment.student_id == student.id,
+            # Hindi ko nililimitahan yung pending at reschedule requests,
+            # para hindi mawala sa student yung hindi pa nasasagot.
             Appointment.status.in_(["pending", "reschedule_requested"]),
         ).order_by(Appointment.created_at.desc(), Appointment.id.desc()).all()
         confirmed_appointments = Appointment.query.options(*appointment_options).filter_by(
@@ -77,6 +88,7 @@ def dashboard():
         appointment_counts = dict(appointment_counts)
         notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(5).all()
         return render_template("dashboard/student.html", listings=listings, listing_page=listings_page, published_listing_count=published_listing_count, application_counts=application_counts, pending_applications=apps.filter_by(status="pending").count(), applicants=apps.count(), appointments=appointments, confirmed_appointments=confirmed_appointments, appointment_counts=appointment_counts, notifications=notifications, now_utc=utcnow())
+    # Admin: bilang lang, lahat galing sa live queries.
     stats = {
         "users": User.query.count(),
         "patients": User.query.filter_by(role="patient").count(),
@@ -97,6 +109,8 @@ def dashboard():
     return render_template("dashboard/admin.html", stats=stats)
 
 
+# Browse page. Search, category, at schedule filter, lahat
+# nasa query string para ma-share yung link.
 @bp.route("/opportunities")
 @bp.route("/appointments")
 def opportunities():
@@ -104,6 +118,8 @@ def opportunities():
     keyword = request.args.get("q", "").strip()[:80]
     category = request.args.get("category", "").strip()[:100]
     availability = request.args.get("availability", "").strip()[:80]
+    # ILIKE para hindi case-sensitive. Parameterized query ito,
+    # kaya hindi puwedeng ma-inject ng SQL.
     if keyword:
         query = query.filter(db.or_(RecruitmentListing.title.ilike(f"%{keyword}%"), RecruitmentListing.description.ilike(f"%{keyword}%"), RecruitmentListing.category.ilike(f"%{keyword}%")))
     if category:
@@ -111,6 +127,8 @@ def opportunities():
     if availability:
         query = query.filter(RecruitmentListing.preferred_schedule.ilike(f"%{availability}%"))
     listings = query.order_by(RecruitmentListing.created_at.desc(), RecruitmentListing.id.desc()).paginate(page=request.args.get("page", 1, type=int), per_page=9, max_per_page=9, error_out=False)
+    # Para sa naka-login na patient: may existing application na
+    # ba siya sa mga listing sa page na ito.
     applied_statuses = {}
     if current_user.is_authenticated and current_user.role == "patient" and current_user.patient_profile:
         page_listing_ids = [listing.id for listing in listings.items]
@@ -122,6 +140,8 @@ def opportunities():
                     PatientApplication.listing_id.in_(page_listing_ids),
                 )
             ).all())
+    # Dropdown ng categories. Published at approved lang ang
+    # pinagkukunan, para walang draft na lumabas.
     categories = db.session.scalars(
         db.select(RecruitmentListing.category)
         .join(DentistryStudent)
@@ -138,6 +158,8 @@ def opportunities():
     return render_template("recruitment/browse.html", listings=listings, categories=categories, applied_statuses=applied_statuses)
 
 
+# Detail page ng listing. Dalawang URL ito, pang-backward
+# compatible sa lumang path.
 @bp.route("/opportunities/<int:listing_id>")
 @bp.route("/appointments/<int:listing_id>")
 def opportunity_detail(listing_id):
@@ -149,6 +171,8 @@ def opportunity_detail(listing_id):
         and current_user.student_profile.id == listing.student_id
     )
     is_admin = current_user.is_authenticated and current_user.role == "admin"
+    # Owner at admin lang ang puwedeng tumingin ng draft o closed.
+    # Sa iba, 404 para hindi mabisto na may tinatago.
     if not (is_owner or is_admin):
         if (
             listing.status != "published"
@@ -165,12 +189,15 @@ def opportunity_detail(listing_id):
     return render_template("recruitment/detail.html", listing=listing, application_status=application_status)
 
 
+# Profile edit. Pag pinalitan yung email, verify ulit at
+# kailangan mag-sign in muli.
 @bp.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
     form = ProfileForm(obj=current_user)
     form.user_id = current_user.id
-    # Lets the phone validator skip a legacy value the user has not edited.
+    # Ipinasa ko yung lumang phone para hindi ma-validate yung
+    # legacy value na hindi naman ginagalaw ng user.
     form.original_phone = current_user.phone or ""
     if current_user.role == "student" and request.method == "GET":
         form.year_level.data = current_user.student_profile.year_level
@@ -188,6 +215,8 @@ def profile():
             profile.campus = form.campus.data.strip() or None
             profile.facebook_url = form.facebook_url.data.strip() or None
             profile.bio = form.bio.data.strip() or None
+        # Email change: verify ulit. Tinaasan ko auth_version at
+        # nirevoke yung OTP para hindi na magamit sa lumang address.
         if current_user.email != old_email:
             current_user.email_verified = False
             current_user.auth_version += 1
@@ -206,6 +235,7 @@ def profile():
             db.session.commit()
             flash("Verify the new email address before signing in again." if sent else "Your email changed, but verification email delivery is unavailable. Use Resend code when email service is restored.", "info")
             return redirect(url_for("auth.verify_email", email=email))
+        # Listahan ng fields na binago, hindi yung laman nila.
         audit_logger.profile_updated(actor=current_user, fields=["full_name", "phone", "email"] if current_user.role != "student" else ["full_name", "phone", "email", "year_level", "campus", "bio", "facebook_url"])
         try:
             db.session.commit()
@@ -220,10 +250,11 @@ def profile():
                            max_avatar_size=MAX_PROFILE_IMAGE_SIZE)
 
 
+# Upload ng avatar. Nasa upload.py yung size, format, at
+# re-encode; dito lang yung role branch at flash.
 @bp.route("/profile/avatar", methods=["POST"])
 @login_required
 def upload_avatar():
-    """Upload avatar for patient or student."""
     if "avatar" not in request.files:
         flash("No file selected.", "error")
         return redirect(url_for("main.profile"))
@@ -260,16 +291,16 @@ def upload_avatar():
     return redirect(url_for("main.profile"))
 
 
+# Tanggal ng avatar. Yung file sa disk, binubura pagkatapos
+# ng commit para hindi mawala yung record kung pumalya.
 @bp.route("/profile/avatar/remove", methods=["POST"])
 @login_required
 def remove_avatar():
-    """Remove avatar for patient or student."""
     if current_user.role == "patient":
         profile = current_user.patient_profile
         if profile.avatar_image:
             old_filename = profile.avatar_image
             profile.avatar_image = None
-            # Delete file after commit
             db.session.commit()
             try:
                 from ..upload import get_upload_root
@@ -305,6 +336,8 @@ def remove_avatar():
     return redirect(url_for("main.profile"))
 
 
+# Palit ng password. Kailangan tama yung current password,
+# tapos logout para mag-sign in ulit.
 @bp.route("/profile/password", methods=["POST"])
 @login_required
 def change_password():
@@ -325,25 +358,25 @@ def change_password():
     return redirect(url_for("main.profile"))
 
 
+# View ng ibang profile. Policy ang nagdedesisyon, tapos
+# naka-log yung attempt kahit denied.
 @bp.route("/profile/<int:user_id>")
 @login_required
 def view_profile(user_id):
-    """View another user's profile with privacy enforcement."""
     target_user = db.get_or_404(User, user_id)
     device = get_device_info(request)
 
-    # Check access using policy
+    # Isang policy call lang, hindi na kailangang i-ulit yung
+    # role checks dito sa route.
     result = ProfileAccessPolicy.can_view_profile(current_user, target_user)
 
+    # Denied pero naka-log pa rin. Patient, 404 ang sagot para
+    # hindi mabisto; student-to-student, 403.
     if result != AccessResult.ALLOWED:
-        # Denied attempts that cross the privacy boundary are audited too.
         audit_logger.profile_viewed(viewer=current_user, target_user=target_user, allowed=False, device=device)
         db.session.commit()
-        # A patient's existence is hidden with 404; student-to-student stays 403.
         abort(404 if target_user.role == "patient" or result == AccessResult.NOT_FOUND else 403)
 
-    # Access allowed - get visible fields. The audit row commits immediately so it
-    # is not lost when the response only renders a template.
     if target_user.role == "student":
         visible_fields = ProfileAccessPolicy.get_visible_student_fields(current_user, target_user)
         audit_logger.profile_viewed(viewer=current_user, target_user=target_user, device=device)
@@ -355,12 +388,12 @@ def view_profile(user_id):
         db.session.commit()
         return render_template("profile/view_patient.html", patient=target_user, fields=visible_fields)
     else:
-        # Admin viewing admin - show basic info
         audit_logger.profile_viewed(viewer=current_user, target_user=target_user, device=device)
         db.session.commit()
         return render_template("profile/view_admin.html", admin=target_user)
 
 
+# Mark as read. Sariling notification lang ang puwede.
 @bp.route("/notifications/<int:notification_id>/read", methods=["POST"])
 @login_required
 def mark_notification(notification_id):
@@ -374,18 +407,17 @@ def mark_notification(notification_id):
     return redirect(request.referrer or url_for("main.dashboard"))
 
 
+# Oras na lang ang hinihingi rito: naka-login lahat ng tao,
+# kaya nasa policy pa rin yung tunay na check.
 @bp.route("/uploads/avatars/<filename>")
 @login_required
 def serve_avatar(filename):
-    """Serve avatar images with authorization."""
-    # Find the user who owns this avatar
     user = None
     if current_user.role == "patient" and current_user.patient_profile and current_user.patient_profile.avatar_image == filename:
         user = current_user
     elif current_user.role == "student" and current_user.student_profile and current_user.student_profile.avatar_image == filename:
         user = current_user
     elif current_user.role == "admin":
-        # Admin can view any avatar - find the owner
         patient = db.session.scalar(db.select(Patient).where(Patient.avatar_image == filename))
         if patient:
             user = patient.user
@@ -394,7 +426,6 @@ def serve_avatar(filename):
             if student:
                 user = student.user
     else:
-        # Check if current user can view this avatar
         patient = db.session.scalar(db.select(Patient).where(Patient.avatar_image == filename))
         if patient and can_view_patient_avatar(current_user, patient.user):
             user = patient.user
@@ -416,9 +447,10 @@ def serve_avatar(filename):
     return response
 
 
+# Cover images. Walang login requirement dito, kaya nasa
+# can_view_listing_cover yung permission check.
 @bp.route("/uploads/covers/<filename>")
 def serve_cover(filename):
-    """Serve listing cover images with authorization."""
     listing = db.session.scalar(db.select(RecruitmentListing).where(RecruitmentListing.cover_image == filename))
     if not listing:
         abort(404)
@@ -436,8 +468,9 @@ def serve_cover(filename):
     return response
 
 
+# MIME type galing sa extension. Fixed map ito, hindi mula
+# sa user input, para hindi ma-spoof yung header.
 def _guess_mimetype(filename):
-    """Guess MIME type from filename."""
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     return {
         "jpg": "image/jpeg",
